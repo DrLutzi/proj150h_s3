@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <ShaderProgramBezier.h>
 #include "bezierpatch_rectangle.h"
+#include "bezierpatch_triangle.h"
 
 
 /**
@@ -22,8 +23,11 @@ protected:
     /// update patch
     void updatePatch();
 
-    ///dessine les lignes du patch
-    void drawPatchLines();
+    ///dessine les lignes d'un patch rectangulaire
+    void drawPatch_Rectangle();
+
+    ///dessine les lignes d'un patch triangulaire
+    void drawPatch_Triangle();
 
     ///dessine les points de controle du patch
     void drawPatchControlPoints();
@@ -62,17 +66,17 @@ protected:
     GLuint m_vbo_id;
     /// buffer interne de points
     GLuint m_numberOfVertices;
-    /// patch de bezier
+    /// patch de bezier dans sa version rectangulaire
     BezierPatch_Rectangle *m_rectangularPatch;
-    /// coordonnees temporaires d'espace caméra
-    qglviewer::Vec m_cameraPoint;
+    /// patch de bezier dans sa version triangulaire
+    BezierPatch_Triangle *m_triangularPatch;
     /// shader prg
     ShaderProgramBezier* m_ShaderProgram;
 
 private:
 
     glm::vec3 m_origin, m_direction;
-    /// Cp sélectionné (oui/non)
+    /// Cp sélectionné (NULL/Cp)
     glm::vec3 *m_selectedCP;
     /// old mouse position, for computing differences
     QPoint m_oldMousePos, m_deltaPos;

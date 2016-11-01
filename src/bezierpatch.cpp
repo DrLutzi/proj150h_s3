@@ -2,9 +2,8 @@
 
 //////////////////////CONSTR////////////////////////////
 
-BezierPatch::BezierPatch() : m_points(0)
+BezierPatch::BezierPatch() : m_points(0), m_VBOData(0)
 {
-    m_points[0]=glm::vec3();
 }
 
 BezierPatch::BezierPatch(size_t sizePatch, size_t sizeVBO) : m_points(sizePatch), m_VBOData(sizeVBO)

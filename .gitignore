@@ -1,0 +1,4 @@
+bin/
+QGLViewer/.*
+QGLViewer/libQGLViewer*
+src/*.user

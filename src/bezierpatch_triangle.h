@@ -13,9 +13,7 @@ public:
 
     //get
 
-    size_t getSizeM() const;
-    size_t getSizeN() const;
-    size_t getSizeP() const;
+    size_t getSize() const;
 
     const glm::vec3 &getPoint(int i, int j, int k) const;
 
@@ -29,7 +27,13 @@ protected:
 
 private:
 
-    size_t m_sizeN;
+    /**
+     * @brief remplit m_precomputedSums_NMinusK avec \sum_{i=0}^{k-1}(n-k); utilisé pour accéder aux CPs avec un 3-uplet (i,j,k).
+     */
+    void fillSums_NMinusK();
+
+    size_t m_size;
+    std::vector<unsigned int> m_precomputedSums_NMinusK;
 };
 
 #endif // BEZIERPATCH_TRIANGLE_H

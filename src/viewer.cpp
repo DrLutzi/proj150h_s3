@@ -76,15 +76,30 @@ void Viewer::init()
 
 }
 
-void Viewer::drawPatchLines()
+void Viewer::drawPatch_Rectangle()
 {
-    glUniform4f(m_ShaderProgram->idOfColor, 0.8, 0.8, 0.8, 0.0);
+    glUniform4f(m_ShaderProgram->idOfColor, 0.7, 0.7, 0.7, 0.0);
 
-    for(unsigned int i=0; i<m_rectangularPatch->getNumberOfPoints(); i+=m_rectangularPatch->getSizeN())
+    for(int i=0; i<m_rectangularPatch->getNumberOfPoints(); i+=m_rectangularPatch->getSizeN())
         glDrawArrays(GL_LINE_STRIP, i, m_rectangularPatch->getSizeN());
 
-    for(unsigned int j=0; j<m_rectangularPatch->getNumberOfPoints(); j+=m_rectangularPatch->getSizeM())
+    for(int j=0; j<m_rectangularPatch->getNumberOfPoints(); j+=m_rectangularPatch->getSizeM())
         glDrawArrays(GL_LINE_STRIP, m_rectangularPatch->getNumberOfPoints()+j, m_rectangularPatch->getSizeM());
+}
+
+void Viewer::drawPatch_Triangle()
+{
+    glUniform4f(m_ShaderProgram->idOfColor, 0.9, 0.9, 0.9, 0.0);
+
+    int jump=0;
+    for(int i=0; i<3; ++i) //dessin des trois passes
+    {
+        for(int passe=m_triangularPatch->getSize(); passe>1; --passe)
+        {
+            glDrawArrays(GL_LINE_STRIP, jump, passe);
+            jump+=passe;
+        }
+    }
 }
 
 void Viewer::drawPatchControlPoints()
@@ -114,7 +129,7 @@ void Viewer::draw()
         glPointSize(4.0); // clair !!
         glLineWidth(2.0);
 
-        drawPatchLines();
+        drawPatch_Rectangle();
 
         drawPatchControlPoints();
 
@@ -172,14 +187,8 @@ void Viewer::mouseMoveEvent(QMouseEvent *e)
     m_origin=vecToGlmVec3(origin);
     m_direction=vecToGlmVec3(direction);
 
-    //peut-être utile ?
-    m_deltaPos=e->pos()-m_oldMousePos;
-    m_oldMousePos=e->pos();
-
     if(m_selectedCP!=NULL && m_deltaPos.x()!=0 && m_deltaPos.y()!=0)
     {
-        /*m_cameraPoint.x+=(float)m_deltaPos.x()/camera()->screenWidth();
-        m_cameraPoint.y-=(float)m_deltaPos.y()/camera()->screenHeight();*/
         *m_selectedCP=m_origin+m_direction*m_distanceSelection;
 
         updatePatch();
