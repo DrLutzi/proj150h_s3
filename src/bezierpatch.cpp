@@ -19,9 +19,8 @@ void BezierPatch::elevation(int degree)
 
 }
 
-const glm::vec3* BezierPatch::getVBOData()
+const glm::vec3* BezierPatch::getVBOData() const
 {
-    makeVBOfromPatch();
     return &m_VBOData[0];
 }
 
@@ -33,6 +32,14 @@ size_t BezierPatch::getVBOSize() const
 size_t BezierPatch::getNumberOfPoints() const
 {
     return m_points.size();
+}
+
+void BezierPatch::toVBO(GLint vboId)
+{
+    makeVBOfromPatch();
+    glBindBuffer(GL_ARRAY_BUFFER, vboId);
+    glBufferData(GL_ARRAY_BUFFER, 3 * getVBOSize() * sizeof(GLfloat), getVBOData(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 glm::vec3 *BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float& distance) const
@@ -58,4 +65,9 @@ glm::vec3 *BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3
     if(r!=oldR)
         distance=glm::length(m_points[iIndex]-origin);
     return r!=oldR ? (glm::vec3 *)&m_points[iIndex] : NULL;
+}
+
+void BezierPatch::drawControlPoints() const
+{
+    glDrawArrays(GL_POINTS, 0, getNumberOfPoints());
 }

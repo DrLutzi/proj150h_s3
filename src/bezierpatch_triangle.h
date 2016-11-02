@@ -3,7 +3,7 @@
 
 #include "bezierpatch.h"
 
-class BezierPatch_Triangle : BezierPatch
+class BezierPatch_Triangle : public BezierPatch
 {
 public:
     BezierPatch_Triangle();
@@ -15,15 +15,19 @@ public:
 
     size_t getSize() const;
 
-    const glm::vec3 &getPoint(int i, int j, int k) const;
+    const glm::vec3 &getPoint(size_t i, size_t j, size_t k) const;
 
     //set
 
-    void setPoint(int i, int j, int k, const glm::vec3& cp);
+    void setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp);
+
+    //others
+
+    void drawLines() const;
 
 protected:
 
-    void makeVBOfromPatch() override;
+    void makeVBOfromPatch();
 
 private:
 

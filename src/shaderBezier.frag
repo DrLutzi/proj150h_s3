@@ -1,6 +1,6 @@
 #version 330
 
-uniform vec4 fsu_color;
+uniform vec3 fsu_color;
 
 out vec4 color_final;
 

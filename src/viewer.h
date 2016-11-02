@@ -23,11 +23,8 @@ protected:
     /// update patch
     void updatePatch();
 
-    ///dessine les lignes d'un patch rectangulaire
-    void drawPatch_Rectangle();
-
-    ///dessine les lignes d'un patch triangulaire
-    void drawPatch_Triangle();
+    ///dessine les lignes d'un patch
+    void drawPatchLines();
 
     ///dessine les points de controle du patch
     void drawPatchControlPoints();
@@ -64,12 +61,12 @@ protected:
     GLuint m_Vao;
     /// id de VBO de position
     GLuint m_vbo_id;
-    /// buffer interne de points
-    GLuint m_numberOfVertices;
     /// patch de bezier dans sa version rectangulaire
     BezierPatch_Rectangle *m_rectangularPatch;
     /// patch de bezier dans sa version triangulaire
     BezierPatch_Triangle *m_triangularPatch;
+    /// patch uniforme
+    BezierPatch *m_patch;
     /// shader prg
     ShaderProgramBezier* m_ShaderProgram;
 

@@ -15,20 +15,31 @@ public:
     size_t getSizeM() const;
     size_t getSizeN() const;
 
-    const glm::vec3 &getPoint(int i, int j) const;
+    const glm::vec3 &getPoint(size_t i, size_t j) const;
 
     //set
 
-    void setPoint(int i, int j, const glm::vec3& cp);
+    void setPoint(size_t i, size_t j, const glm::vec3& cp);
+
+    //others
+
+    void drawLines() const;
 
 protected:
 
-    void makeVBOfromPatch() override;
+    void makeVBOfromPatch();
 
 private:
 
     size_t m_sizeM;
     size_t m_sizeN;
+};
+
+class BezierPatch_Square : public BezierPatch_Rectangle
+{
+    BezierPatch_Square();
+    BezierPatch_Square(size_t size);
+    virtual ~BezierPatch_Square();
 };
 
 #endif // BEZIERPATCH_RECTANGLE_H

@@ -2,6 +2,7 @@
 #define BEZIERPATCH_H
 
 #include "glm/glm.hpp"
+#include <GL/glew.h>
 #include <vector>
 
 class BezierPatch
@@ -15,8 +16,13 @@ public:
 
     size_t getNumberOfPoints() const;
 
-    const glm::vec3* getVBOData();
+    const glm::vec3* getVBOData() const;
     size_t getVBOSize() const;
+
+    void toVBO(GLint vboId);
+
+    virtual void drawLines() const=0;
+    virtual void drawControlPoints() const;
 
     /**
      * @brief compute intersection between a control point and a ray

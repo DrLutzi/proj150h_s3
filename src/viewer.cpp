@@ -4,14 +4,16 @@
 
 void Viewer::tp_init()
 {
+    setFPSIsDisplayed();
     m_oldMousePos=QPoint(0,0);
     m_deltaPos=QPoint(0,0);
     m_selectedCP=NULL;
 
     setMouseTracking(true);
     // genere les donnees a afficher
-    m_numberOfVertices = 4;
-    m_rectangularPatch = new BezierPatch_Rectangle(2,3);
+
+    /*m_patch = new BezierPatch_Rectangle(2,3);
+    m_rectangularPatch = static_cast<BezierPatch_Rectangle*>(m_patch);
 
     m_rectangularPatch->setPoint(0,0, glm::vec3(-1,-1,-0.5));
     m_rectangularPatch->setPoint(0,1, glm::vec3(-1,1,-0.1));
@@ -20,8 +22,19 @@ void Viewer::tp_init()
 
     m_rectangularPatch->setPoint(1,0, glm::vec3(1,-1,0.5));
     m_rectangularPatch->setPoint(1,1, glm::vec3(1,1,0));
-    m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));
+    m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));*/
 
+    m_patch = new BezierPatch_Triangle(3);
+    m_triangularPatch = static_cast<BezierPatch_Triangle*>(m_patch);
+
+    m_triangularPatch->setPoint(0,0,2, glm::vec3(0,1,-0.1));
+
+    m_triangularPatch->setPoint(1,0,1, glm::vec3(-0.5,0,0.1));
+    m_triangularPatch->setPoint(0,1,1, glm::vec3(0.5,0,-0.2));
+
+    m_triangularPatch->setPoint(2,0,0, glm::vec3(-1,-1,0));
+    m_triangularPatch->setPoint(1,1,0, glm::vec3(0,-1,0));
+    m_triangularPatch->setPoint(0,2,0, glm::vec3(1,-1,0));
 
 
     // SHADER
@@ -29,13 +42,8 @@ void Viewer::tp_init()
 
     //VBO
     glGenBuffers(1, &m_vbo_id);
-    // buffer courant a manipuler
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo_id);
-    // definit la taille du buffer et le remplit
-    glBufferData(GL_ARRAY_BUFFER, 3 * m_rectangularPatch->getVBOSize() * sizeof(GLfloat), m_rectangularPatch->getVBOData(), GL_DYNAMIC_DRAW);
-    // buffer courant : rien
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
     // genere 1 VAO
+    m_patch->toVBO(m_vbo_id);
     glGenVertexArrays(1, &m_Vao);
     // on travaille sur celui-ci
     glBindVertexArray(m_Vao);
@@ -76,37 +84,18 @@ void Viewer::init()
 
 }
 
-void Viewer::drawPatch_Rectangle()
+void Viewer::drawPatchLines()
 {
     glUniform4f(m_ShaderProgram->idOfColor, 0.7, 0.7, 0.7, 0.0);
 
-    for(int i=0; i<m_rectangularPatch->getNumberOfPoints(); i+=m_rectangularPatch->getSizeN())
-        glDrawArrays(GL_LINE_STRIP, i, m_rectangularPatch->getSizeN());
-
-    for(int j=0; j<m_rectangularPatch->getNumberOfPoints(); j+=m_rectangularPatch->getSizeM())
-        glDrawArrays(GL_LINE_STRIP, m_rectangularPatch->getNumberOfPoints()+j, m_rectangularPatch->getSizeM());
-}
-
-void Viewer::drawPatch_Triangle()
-{
-    glUniform4f(m_ShaderProgram->idOfColor, 0.9, 0.9, 0.9, 0.0);
-
-    int jump=0;
-    for(int i=0; i<3; ++i) //dessin des trois passes
-    {
-        for(int passe=m_triangularPatch->getSize(); passe>1; --passe)
-        {
-            glDrawArrays(GL_LINE_STRIP, jump, passe);
-            jump+=passe;
-        }
-    }
+    m_patch->drawLines();
 }
 
 void Viewer::drawPatchControlPoints()
 {
     glUniform4f(m_ShaderProgram->idOfColor, 1.0, 0.1, 0.1, 0.0);
 
-    glDrawArrays(GL_POINTS, 0, m_rectangularPatch->getNumberOfPoints());
+    m_patch->drawControlPoints();
 }
 
 void Viewer::draw()
@@ -129,7 +118,7 @@ void Viewer::draw()
         glPointSize(4.0); // clair !!
         glLineWidth(2.0);
 
-        drawPatch_Rectangle();
+        drawPatchLines();
 
         drawPatchControlPoints();
 
@@ -141,15 +130,10 @@ void Viewer::draw()
 
 void Viewer::updatePatch()
 {
-    // buffer courant a manipuler
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo_id);
-    // definit la taille du buffer et le remplit
-    glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(GLfloat) * m_rectangularPatch->getVBOSize(), m_rectangularPatch->getVBOData(), GL_DYNAMIC_DRAW);
-    // buffer courant : rien
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    m_patch->toVBO(m_vbo_id);
+
+    updateGL();
 }
-
-
 
 void Viewer::keyPressEvent(QKeyEvent *e)
 {
@@ -169,7 +153,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
-    if((m_selectedCP=m_rectangularPatch->rayIntersectsCP(m_origin, m_direction, 0.6, m_distanceSelection))==NULL)
+    if((m_selectedCP=m_patch->rayIntersectsCP(m_origin, m_direction, 0.6, m_distanceSelection))==NULL)
         QGLViewer::mousePressEvent(e);
 }
 
@@ -187,13 +171,22 @@ void Viewer::mouseMoveEvent(QMouseEvent *e)
     m_origin=vecToGlmVec3(origin);
     m_direction=vecToGlmVec3(direction);
 
-    if(m_selectedCP!=NULL && m_deltaPos.x()!=0 && m_deltaPos.y()!=0)
-    {
-        *m_selectedCP=m_origin+m_direction*m_distanceSelection;
+    m_deltaPos=e->pos()-m_oldMousePos;
+    m_oldMousePos=e->pos();
 
-        updatePatch();
+    if(m_selectedCP!=NULL)
+    {
+        if(m_deltaPos.x()!=0 || m_deltaPos.y()!=0)
+        {
+            *m_selectedCP=m_origin+m_direction*m_distanceSelection;
+
+            updatePatch();
+        }
     }
-    QGLViewer::mouseMoveEvent(e);
+    else
+    {
+        QGLViewer::mouseMoveEvent(e);
+    }
 }
 
 glm::vec3 Viewer::vecToGlmVec3(const qglviewer::Vec& v)
