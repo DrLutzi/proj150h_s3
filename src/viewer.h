@@ -29,6 +29,9 @@ protected:
     ///dessine les points de controle du patch
     void drawPatchControlPoints();
 
+    ///dessine la surface/courbe de Bézier définie par le patch
+    void drawPatchBezier();
+
 	/// draw callback de la QGLViewer
     void draw();
 
@@ -59,7 +62,7 @@ protected:
     /// Donnees du TP
     /// id de VAO
     GLuint m_Vao;
-    /// id de VBO de position
+    /// id de VBO pour les positions et les lignes des CP
     GLuint m_vbo_id;
     /// patch de bezier dans sa version rectangulaire
     BezierPatch_Rectangle *m_rectangularPatch;
@@ -79,7 +82,8 @@ private:
     QPoint m_oldMousePos, m_deltaPos;
     /// distance between camera and selected point
     float m_distanceSelection;
-
+    /// compute bezier surface for next frame
+    bool m_drawBezier;
 };
 
 #endif

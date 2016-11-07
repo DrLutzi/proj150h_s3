@@ -24,10 +24,11 @@ public:
     //others
 
     void drawLines() const;
+    void drawBezier() const{}
 
 protected:
 
-    void makeVBOfromPatch();
+    void makeVBOLines();
 
 private:
 

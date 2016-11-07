@@ -46,9 +46,14 @@ void BezierPatch_Rectangle::drawLines() const
         glDrawArrays(GL_LINE_STRIP, getNumberOfPoints()+j, getSizeM());
 }
 
+void BezierPatch_Rectangle::drawBezier() const
+{
+    glDrawArrays(GL_POINTS, getSizeVBOLines_GPU(), m_VBOBezier.size());
+}
+
 //////////////////////PRIVATE////////////////////////////
 
-void BezierPatch_Rectangle::makeVBOfromPatch()
+void BezierPatch_Rectangle::makeVBOLines()
 {
     if(m_points.size()>1)
     {
@@ -57,7 +62,7 @@ void BezierPatch_Rectangle::makeVBOfromPatch()
         {
             for(size_t j=0; j<m_sizeN; ++j)
             {
-                m_VBOData[k++]=getPoint(i,j);
+                m_VBOLines[k++]=getPoint(i,j);
             }
         }
 
@@ -65,10 +70,64 @@ void BezierPatch_Rectangle::makeVBOfromPatch()
         {
             for(size_t i=0; i<m_sizeM; ++i)
             {
-                m_VBOData[k++]=getPoint(i,j);
+                m_VBOLines[k++]=getPoint(i,j);
             }
         }
     }
+}
+
+const glm::vec3& BezierPatch_Rectangle::casteljau(float u, float v)
+{
+    //first fill tmp tab with all the control points (slower, but easier to read)
+
+    for(int i=0; i<m_sizeM; ++i)
+    {
+        for(int j=0; j<m_sizeN; ++j)
+        {
+            getTmpCasteljau(i, j)=getPoint(i, j);
+        }
+    }
+
+    int cSize;
+    //approche produit tensoriel en montant en v
+    for(int j=0; j<m_sizeN; ++j)
+    {
+        for(cSize=m_sizeM-1; cSize>0; --cSize)
+        {
+            for(int i=0; i<cSize; ++i)
+            {
+                getTmpCasteljau(i, j)= (1-u)*getTmpCasteljau(i, j) + (u)*getTmpCasteljau(i+1, j);
+            }
+        }
+    }
+
+    //B^m_0 créés, 1 casteljau sur v
+
+    for(cSize=m_sizeN-1; cSize>0; --cSize)
+    {
+        for(int j=0; j<cSize; ++j)
+        {
+            getTmpCasteljau(0, j)= (1-v)*getTmpCasteljau(0, j) + (v)*getTmpCasteljau(0, j+1);
+        }
+    }
+    return getTmpCasteljau(0, 0);
+}
+
+void BezierPatch_Rectangle::makeVBOBezierDeCasteljau()
+{
+    m_VBOBezier.resize(0);
+    if(m_resolutionChanged)
+    {
+        m_VBOBezier.reserve(std::max(size_t(0), m_resolution*m_resolution));
+    }
+    for(int i=0; i<std::max(size_t(0), m_resolution-1); ++i)
+        for(int j=0; j<m_resolution-1; ++j)
+            m_VBOBezier.push_back(casteljau((float)i/m_resolution, (float)j/m_resolution));
+}
+
+glm::vec3 &BezierPatch_Rectangle::getTmpCasteljau(size_t i, size_t j)
+{
+    return m_tmpCasteljau[i*m_sizeN+j];
 }
 
 /////////////////////////////////////////////////////////

@@ -12,7 +12,8 @@ void Viewer::tp_init()
     setMouseTracking(true);
     // genere les donnees a afficher
 
-    /*m_patch = new BezierPatch_Rectangle(2,3);
+    m_patch = new BezierPatch_Rectangle(2,3);
+    m_patch->setResolution(10);
     m_rectangularPatch = static_cast<BezierPatch_Rectangle*>(m_patch);
 
     m_rectangularPatch->setPoint(0,0, glm::vec3(-1,-1,-0.5));
@@ -22,9 +23,9 @@ void Viewer::tp_init()
 
     m_rectangularPatch->setPoint(1,0, glm::vec3(1,-1,0.5));
     m_rectangularPatch->setPoint(1,1, glm::vec3(1,1,0));
-    m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));*/
+    m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));
 
-    m_patch = new BezierPatch_Triangle(3);
+    /*m_patch = new BezierPatch_Triangle(3);
     m_triangularPatch = static_cast<BezierPatch_Triangle*>(m_patch);
 
     m_triangularPatch->setPoint(0,0,2, glm::vec3(0,1,-0.1));
@@ -34,7 +35,7 @@ void Viewer::tp_init()
 
     m_triangularPatch->setPoint(2,0,0, glm::vec3(-1,-1,0));
     m_triangularPatch->setPoint(1,1,0, glm::vec3(0,-1,0));
-    m_triangularPatch->setPoint(0,2,0, glm::vec3(1,-1,0));
+    m_triangularPatch->setPoint(0,2,0, glm::vec3(1,-1,0));*/
 
 
     // SHADER
@@ -43,7 +44,8 @@ void Viewer::tp_init()
     //VBO
     glGenBuffers(1, &m_vbo_id);
     // genere 1 VAO
-    m_patch->toVBO(m_vbo_id);
+    m_patch->makeVBO(m_vbo_id);
+    m_patch->updateVBO_CP(m_vbo_id);
     glGenVertexArrays(1, &m_Vao);
     // on travaille sur celui-ci
     glBindVertexArray(m_Vao);
@@ -98,6 +100,13 @@ void Viewer::drawPatchControlPoints()
     m_patch->drawControlPoints();
 }
 
+void Viewer::drawPatchBezier()
+{
+    glUniform4f(m_ShaderProgram->idOfColor, 0.3, 0.9, 0.3, 0.0);
+
+    m_patch->drawBezier();
+}
+
 void Viewer::draw()
 {
     // recupere les matrices depuis l'interface
@@ -122,6 +131,9 @@ void Viewer::draw()
 
         drawPatchControlPoints();
 
+        if(m_drawBezier)
+            drawPatchBezier();
+
         glBindVertexArray(0);
 
         m_ShaderProgram->stopUseProgram();
@@ -130,7 +142,8 @@ void Viewer::draw()
 
 void Viewer::updatePatch()
 {
-    m_patch->toVBO(m_vbo_id);
+    m_patch->updateVBO_CP(m_vbo_id);
+    m_drawBezier=false; //bezier CPs have changed, thus the bezier surface isn't valide anymore
 
     updateGL();
 }
@@ -141,6 +154,11 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 	{
         case Qt::Key_R: // touche 'r'
 		break;
+
+        case Qt::Key_B:
+            m_patch->updateVBO_Bezier(m_vbo_id);
+            m_drawBezier=true;
+            break;
 
 	default:
 		break;
@@ -176,7 +194,7 @@ void Viewer::mouseMoveEvent(QMouseEvent *e)
 
     if(m_selectedCP!=NULL)
     {
-        if(m_deltaPos.x()!=0 || m_deltaPos.y()!=0)
+ //       if(m_deltaPos.x()!=0 || m_deltaPos.y()!=0)
         {
             *m_selectedCP=m_origin+m_direction*m_distanceSelection;
 

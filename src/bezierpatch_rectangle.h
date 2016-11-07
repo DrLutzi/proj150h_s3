@@ -24,10 +24,17 @@ public:
     //others
 
     void drawLines() const;
+    void drawBezier() const;
 
 protected:
 
-    void makeVBOfromPatch();
+    virtual const glm::vec3 &casteljau(float u, float v);
+
+    void makeVBOLines();
+
+    void makeVBOBezierDeCasteljau();
+
+    glm::vec3 &getTmpCasteljau(size_t i, size_t j);
 
 private:
 

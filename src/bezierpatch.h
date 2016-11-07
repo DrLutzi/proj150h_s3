@@ -5,23 +5,27 @@
 #include <GL/glew.h>
 #include <vector>
 
+#include <QDebug>
+
 class BezierPatch
 {
 public:
     BezierPatch();
-    BezierPatch(size_t sizePatch, size_t sizeVBO);
+    BezierPatch(size_t sizePatch, size_t sizeVBOLines);
     ~BezierPatch();
 
     virtual void elevation(int degree);
 
     size_t getNumberOfPoints() const;
 
-    const glm::vec3* getVBOData() const;
-    size_t getVBOSize() const;
+    void makeVBO(GLint vboId);
+    void updateVBO_CP(GLint vboId);
+    void updateVBO_Bezier(GLint vboId);
 
-    void toVBO(GLint vboId);
+    void setResolution(size_t resolution);
 
     virtual void drawLines() const=0;
+    virtual void drawBezier() const=0;
     virtual void drawControlPoints() const;
 
     /**
@@ -39,12 +43,29 @@ public:
 protected:
 
     /**
-     * @brief computes the best VBO datas from the patch into m_VBOData
+     * @brief computes the best patch lines VBO from the patch into m_VBOLines
      */
-    virtual void makeVBOfromPatch()=0;
+    virtual void makeVBOLines()=0;
+
+    /**
+     * @brief computes the best patch surface or curve VBO from the patch into m_VBOBezier using DeCasteljau
+     * @param rate number of points generated to render polygons
+     */
+    virtual void makeVBOBezierDeCasteljau()=0;
+
+    const glm::vec3* getVBOLinesData() const;
+    const glm::vec3* getVBOBezierData() const;
+
+    GLsizeiptr getSizeVBOLines_GPU() const;
+    GLsizeiptr getSizeVBOBezier_GPU() const;
 
     std::vector<glm::vec3> m_points;
-    std::vector<glm::vec3> m_VBOData;
+    std::vector<glm::vec3> m_tmpCasteljau;
+    std::vector<glm::vec3> m_VBOLines;
+    std::vector<glm::vec3> m_VBOBezier;
+
+    size_t m_resolution;
+    bool m_resolutionChanged;
 };
 
 

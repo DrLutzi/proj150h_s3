@@ -37,7 +37,7 @@ void BezierPatch_Triangle::setPoint(size_t i, size_t j, size_t k, const glm::vec
 
 //////////////////////PROTECTED////////////////////////////
 
-void BezierPatch_Triangle::makeVBOfromPatch()
+void BezierPatch_Triangle::makeVBOLines()
 {
     if(m_points.size()<3)
         return;
@@ -47,7 +47,7 @@ void BezierPatch_Triangle::makeVBOfromPatch()
     //première passe triviale : les points sont ordonnés correctement dans le vecteur m_points. Ici on monte selon k
     for(size_t i=0; i<m_points.size()-1; ++i)
     {
-        m_VBOData[vboIndex++]=m_points[i];
+        m_VBOLines[vboIndex++]=m_points[i];
     }
 
     //deuxièmes et troisièmes passes, on monte selon i, puis selon j.
@@ -58,7 +58,7 @@ void BezierPatch_Triangle::makeVBOfromPatch()
         for(size_t k=0; k<sizeMinusI; ++k)
         {
             size_t j=sizeMinusI-k-1;
-            m_VBOData[vboIndex++]=getPoint(i,j,k);
+            m_VBOLines[vboIndex++]=getPoint(i,j,k);
         }
     }
 
@@ -68,7 +68,7 @@ void BezierPatch_Triangle::makeVBOfromPatch()
         for(size_t i=0; i<sizeMinusJ; ++i)
         {
             size_t k=sizeMinusJ-i-1;
-            m_VBOData[vboIndex++]=getPoint(i,j,k);
+            m_VBOLines[vboIndex++]=getPoint(i,j,k);
         }
     }
 }
