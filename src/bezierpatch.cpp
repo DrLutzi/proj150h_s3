@@ -2,11 +2,11 @@
 
 //////////////////////CONSTR////////////////////////////
 
-BezierPatch::BezierPatch() : m_points(0), m_tmpCasteljau(0), m_VBOLines(0), m_VBOBezier(0), m_resolution(0)
+BezierPatch::BezierPatch() : m_points(0), m_EBOPoints(0), m_bezier(0), m_resolution(0)
 {
 }
 
-BezierPatch::BezierPatch(size_t sizePatch, size_t sizeVBOLines) : m_points(sizePatch), m_tmpCasteljau(sizePatch), m_VBOLines(sizeVBOLines), m_VBOBezier(), m_resolution(0)
+BezierPatch::BezierPatch(size_t sizePatch, size_t sizeEBOPoints) : m_points(sizePatch), m_EBOPoints(sizeEBOPoints), m_bezier(), m_EBOBezier(), m_resolution(0)
 {}
 
 BezierPatch::~BezierPatch()
@@ -14,28 +14,51 @@ BezierPatch::~BezierPatch()
 
 //////////////////////PUBLIC////////////////////////////
 
-void BezierPatch::elevation(int degree)
-{
-
-}
-
 size_t BezierPatch::getNumberOfPoints() const
 {
     return m_points.size();
 }
 
-void BezierPatch::makeVBO(GLint vboId)
+void BezierPatch::makeVBO(GLint vboId, GLint eboId)
 {
     glBindBuffer(GL_ARRAY_BUFFER, vboId);
-    glBufferData(GL_ARRAY_BUFFER, getSizeVBOLines_GPU() + getSizeVBOBezier_GPU(), NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, getSizeVBOPoints_GPU() + getSizeVBOBezier_GPU(), NULL, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eboId);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, getSizeEBOPoints_GPU() + getSizeEBOBezier_GPU(), NULL, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void BezierPatch::updateVBO_CP(GLint vboId)
+void BezierPatch::updateVBO_CP(GLint vboId, GLint eboId)
 {
     makeVBOLines();
     glBindBuffer(GL_ARRAY_BUFFER, vboId);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, getSizeVBOLines_GPU(), getVBOLinesData());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, getSizeVBOPoints_GPU(), &m_points[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eboId);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, getSizeEBOPoints_GPU() , &m_EBOPoints[0]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void BezierPatch::updateVBO_Bezier(GLint vboId, GLint eboId)
+{
+    makeVBOBezierDeCasteljau();
+    if(m_resolutionChanged)
+    {
+        makeVBO(vboId, eboId);
+        updateVBO_CP(vboId, eboId);
+        m_resolutionChanged=false;
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, vboId);
+    //offset starts after the VBO datas where points have been put
+    glBufferSubData(GL_ARRAY_BUFFER, getSizeVBOPoints_GPU(), getSizeVBOBezier_GPU(), &m_bezier[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, eboId);
+    //same remark for the EBO
+    glBufferSubData(GL_ARRAY_BUFFER, getSizeEBOPoints_GPU(), getSizeEBOBezier_GPU(), &m_EBOBezier[0]);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -44,21 +67,6 @@ void BezierPatch::setResolution(size_t resolution)
     m_resolutionChanged=m_resolution != resolution;
     m_resolution=resolution;
 }
-
-void BezierPatch::updateVBO_Bezier(GLint vboId)
-{
-    makeVBOBezierDeCasteljau();
-    if(m_resolutionChanged)
-    {
-        makeVBO(vboId);
-        updateVBO_CP(vboId); m_resolutionChanged=false;
-    }
-    glBindBuffer(GL_ARRAY_BUFFER, vboId);
-    //offset starts after the vbo datas for lines set into the actual VBO
-    glBufferSubData(GL_ARRAY_BUFFER, getSizeVBOLines_GPU(), getSizeVBOBezier_GPU(), getVBOBezierData());
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
 
 glm::vec3 *BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float& distance) const
 {
@@ -85,29 +93,34 @@ glm::vec3 *BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3
     return r!=oldR ? (glm::vec3 *)&m_points[iIndex] : NULL;
 }
 
-void BezierPatch::drawControlPoints() const
+void BezierPatch::drawControlPoints(GLint first, GLint baseVertex) const
 {
-    glDrawArrays(GL_POINTS, 0, getNumberOfPoints());
+    glDrawArrays(GL_POINTS, first, getNumberOfPoints());
+}
+
+void BezierPatch::drawBezier(GLint first, GLint baseVertex) const
+{
+    glDrawElementsBaseVertex(GL_POINTS, m_EBOPoints.size(), GL_UNSIGNED_INT, (GLvoid*)(first*sizeof(unsigned int)), baseVertex);
 }
 
 //////////////////////PROTECTED////////////////////////////
 
-const glm::vec3* BezierPatch::getVBOLinesData() const
+GLsizeiptr BezierPatch::getSizeVBOPoints_GPU() const
 {
-    return &m_VBOLines[0];
-}
-
-const glm::vec3* BezierPatch::getVBOBezierData() const
-{
-    return &m_VBOBezier[0];
-}
-
-GLsizeiptr BezierPatch::getSizeVBOLines_GPU() const
-{
-    return 3 * m_VBOLines.size() * sizeof(GLfloat);
+    return 3 * m_points.size() * sizeof(GLfloat);
 }
 
 GLsizeiptr BezierPatch::getSizeVBOBezier_GPU() const
 {
-    return 3 * m_VBOBezier.size() * sizeof(GLfloat);
+    return 3 * m_bezier.size() * sizeof(GLfloat);
+}
+
+GLsizeiptr BezierPatch::getSizeEBOPoints_GPU() const
+{
+    return m_EBOPoints.size() * sizeof(unsigned int);
+}
+
+GLsizeiptr BezierPatch::getSizeEBOBezier_GPU() const
+{
+    return m_EBOBezier.size() * sizeof(unsigned int);
 }

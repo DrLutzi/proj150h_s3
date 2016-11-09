@@ -11,22 +11,20 @@ class BezierPatch
 {
 public:
     BezierPatch();
-    BezierPatch(size_t sizePatch, size_t sizeVBOLines);
+    BezierPatch(size_t sizePatch, size_t sizeEBOPoints);
     ~BezierPatch();
-
-    virtual void elevation(int degree);
 
     size_t getNumberOfPoints() const;
 
-    void makeVBO(GLint vboId);
-    void updateVBO_CP(GLint vboId);
-    void updateVBO_Bezier(GLint vboId);
+    void makeVBO(GLint vboId, GLint eboId);
+    void updateVBO_CP(GLint vboId, GLint eboId);
+    void updateVBO_Bezier(GLint vboId, GLint eboId);
 
     void setResolution(size_t resolution);
 
-    virtual void drawLines() const=0;
-    virtual void drawBezier() const=0;
-    virtual void drawControlPoints() const;
+    virtual void drawLines(GLint first=0, GLint baseVertex=0) const=0;
+    virtual void drawBezier(GLint first=0, GLint baseVertex=0) const;
+    virtual void drawControlPoints(GLint first=0, GLint baseVertex=0) const;
 
     /**
      * @brief compute intersection between a control point and a ray
@@ -53,21 +51,21 @@ protected:
      */
     virtual void makeVBOBezierDeCasteljau()=0;
 
-    const glm::vec3* getVBOLinesData() const;
-    const glm::vec3* getVBOBezierData() const;
-
-    GLsizeiptr getSizeVBOLines_GPU() const;
+    GLsizeiptr getSizeVBOPoints_GPU() const;
     GLsizeiptr getSizeVBOBezier_GPU() const;
 
+    GLsizeiptr getSizeEBOPoints_GPU() const;
+    GLsizeiptr getSizeEBOBezier_GPU() const;
+
     std::vector<glm::vec3> m_points;
-    std::vector<glm::vec3> m_tmpCasteljau;
-    std::vector<glm::vec3> m_VBOLines;
-    std::vector<glm::vec3> m_VBOBezier;
+    std::vector<unsigned int> m_EBOPoints;
+
+    std::vector<glm::vec3> m_bezier;
+    std::vector<unsigned int> m_EBOBezier;
 
     size_t m_resolution;
     bool m_resolutionChanged;
 };
-
 
 /*
 

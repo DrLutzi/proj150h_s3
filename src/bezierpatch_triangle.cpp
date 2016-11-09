@@ -4,7 +4,7 @@ BezierPatch_Triangle::BezierPatch_Triangle() : BezierPatch(), m_size(0)
 {
 }
 
-BezierPatch_Triangle::BezierPatch_Triangle(size_t n) : BezierPatch(((n)*(n+1))/2, std::max((size_t)0, (( ((n)*(n+1))/2) -1)*3)), m_size(n), m_precomputedSums_NMinusK(n)
+BezierPatch_Triangle::BezierPatch_Triangle(size_t n) : BezierPatch(((n)*(n+1))/2, std::max((size_t)0, (( ((n)*(n-1))/2))*3)), m_size(n), m_precomputedSums_NMinusK(n), m_tmpCasteljau(m_points.size())
 {
     fillSums_NMinusK();
 }
@@ -34,43 +34,101 @@ void BezierPatch_Triangle::setPoint(size_t i, size_t j, size_t k, const glm::vec
     m_points[m_precomputedSums_NMinusK[k]+j]=cp;
 }
 
+//others
+
+
+
+//draw functions
+
+void BezierPatch_Triangle::drawLines(GLint first, GLint baseVertex) const
+{
+    GLint polygonMode[2];
+    glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+    glDrawElementsBaseVertex(GL_TRIANGLES, m_EBOPoints.size(), GL_UNSIGNED_INT, (GLvoid*)(first*sizeof(unsigned int)), 0+baseVertex);
+    glPolygonMode(polygonMode[0], polygonMode[1]);
+}
+
+void BezierPatch_Triangle::drawBezier(GLint first, GLint baseVertex) const
+{
+    glDrawElementsBaseVertex(GL_POINTS, m_EBOBezier.size(), GL_UNSIGNED_INT, (GLvoid*)(getSizeEBOPoints_GPU()+first*sizeof(unsigned int)), baseVertex);
+}
+
 
 //////////////////////PROTECTED////////////////////////////
 
+const glm::vec3 &BezierPatch_Triangle::casteljau(float u, float v, float w)
+{
+    //first, as usual, fill the tmp vector with the current control points in m_points
+    for(size_t i=0; i<m_points.size(); ++i)
+        m_tmpCasteljau[i]=m_points[i];
+
+    //then compute a new set of control points by linear interpolation, smaller than the previous one
+    //do that until the size of the set is 1
+    size_t setSize;
+    size_t i=0, j=0, k=0;
+    for(setSize=m_size-1; setSize>0; --setSize)
+    {
+        for(i=0; i<setSize; ++i)
+        {
+            size_t sizeMinusI=setSize-i;
+            for(j=0; j<sizeMinusI; ++j)
+            {
+                k=sizeMinusI-j-1;
+                getTmpCasteljau(i,j,k)= u*getTmpCasteljau(i+1, j, k) + v*getTmpCasteljau(i, j+1, k) + w*getTmpCasteljau(i, j, k+1);
+            }
+        }
+    }
+    return m_tmpCasteljau[0];
+}
+
 void BezierPatch_Triangle::makeVBOLines()
 {
-    if(m_points.size()<3)
-        return;
-    //construction du VBO ligne par ligne en trois passes, où chaque passe construit ses lignes en montant progressivement dans un indice.
-    int vboIndex=0;
+    int eboIndex=0;
 
-    //première passe triviale : les points sont ordonnés correctement dans le vecteur m_points. Ici on monte selon k
-    for(size_t i=0; i<m_points.size()-1; ++i)
+    //construction triangle par triangle
+    for(size_t k=0; k<getSize()-1; ++k) //"from bottom to top"
     {
-        m_VBOLines[vboIndex++]=m_points[i];
-    }
-
-    //deuxièmes et troisièmes passes, on monte selon i, puis selon j.
-
-    for(size_t i=0; i<m_size-1; ++i)
-    {
-        size_t sizeMinusI=m_size-i;
-        for(size_t k=0; k<sizeMinusI; ++k)
+        for(size_t j=0; j<getSize()-k-1; ++j) //also read "from left to right"
         {
-            size_t j=sizeMinusI-k-1;
-            m_VBOLines[vboIndex++]=getPoint(i,j,k);
+            //the point iterated, his right neighbor, and top neighbor
+            m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k]+j;
+            m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k]+j+1;
+            m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k+1]+j;
         }
     }
+}
 
-    for(size_t j=0; j<m_size-1; ++j)
+void BezierPatch_Triangle::makeVBOBezierDeCasteljau()
+{
+    size_t cappedResolution=std::max(size_t(2), m_resolution);
+
+    m_bezier.resize(0);
+    m_bezier.reserve(cappedResolution*cappedResolution);
+
+    m_EBOBezier.resize(0);
+    m_EBOBezier.reserve(cappedResolution*cappedResolution*3);
+
+    //calculate entire VBO, from top to bottom, left to right (because why not?)
+    int nope=0;
+    for(size_t i=0; i<cappedResolution; ++i)
     {
-        size_t sizeMinusJ=m_size-j;
-        for(size_t i=0; i<sizeMinusJ; ++i)
+        for(size_t j=0; j<cappedResolution-i; ++j)
         {
-            size_t k=sizeMinusJ-i-1;
-            m_VBOLines[vboIndex++]=getPoint(i,j,k);
+            size_t k=cappedResolution-i-j-1;
+            m_bezier.push_back(casteljau((float)(i)/(cappedResolution-1),
+                                         (float)(j)/(cappedResolution-1),
+                                         (float)(k)/(cappedResolution-1)));
+            m_EBOBezier.push_back(nope++);
         }
     }
+}
+
+glm::vec3 &BezierPatch_Triangle::getTmpCasteljau(size_t i, size_t j, size_t k)
+{
+    //this might seem odd, but we can show on the paper that it works for casteljau
+    //as straight forward as this as long as the vector has the size of m_points
+    return m_tmpCasteljau[m_precomputedSums_NMinusK[k]+j];
 }
 
 //////////////////////PRIVATE////////////////////////////
@@ -82,18 +140,5 @@ void BezierPatch_Triangle::fillSums_NMinusK()
     {
         m_precomputedSums_NMinusK[k]=currentValue;
         currentValue+=(unsigned int)m_size-k;
-    }
-}
-
-void BezierPatch_Triangle::drawLines() const
-{
-    int jump=0;
-    for(int i=0; i<3; ++i) //dessin des trois passes
-    {
-        for(int lineSize=getSize(); lineSize>1; --lineSize)
-        {
-            glDrawArrays(GL_LINE_STRIP, jump, lineSize);
-            jump+=lineSize;
-        }
     }
 }

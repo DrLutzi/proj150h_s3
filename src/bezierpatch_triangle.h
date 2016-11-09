@@ -23,12 +23,18 @@ public:
 
     //others
 
-    void drawLines() const;
-    void drawBezier() const{}
+    void drawLines(GLint first=0, GLint baseVertex=0) const;
+    void drawBezier(GLint first=0, GLint baseVertex=0) const;
 
 protected:
 
+    const glm::vec3 &casteljau(float u, float v, float w);
+
     void makeVBOLines();
+
+    void makeVBOBezierDeCasteljau();
+
+    glm::vec3 &getTmpCasteljau(size_t i, size_t j, size_t k);
 
 private:
 
@@ -39,6 +45,8 @@ private:
 
     size_t m_size;
     std::vector<unsigned int> m_precomputedSums_NMinusK;
+
+    std::vector<glm::vec3> m_tmpCasteljau;
 };
 
 #endif // BEZIERPATCH_TRIANGLE_H

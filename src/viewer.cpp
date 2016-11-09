@@ -12,8 +12,8 @@ void Viewer::tp_init()
     setMouseTracking(true);
     // genere les donnees a afficher
 
-    m_patch = new BezierPatch_Rectangle(2,3);
-    m_patch->setResolution(10);
+    /*m_patch = new BezierPatch_Rectangle(2,3);
+    m_patch->setResolution(11);
     m_rectangularPatch = static_cast<BezierPatch_Rectangle*>(m_patch);
 
     m_rectangularPatch->setPoint(0,0, glm::vec3(-1,-1,-0.5));
@@ -23,9 +23,10 @@ void Viewer::tp_init()
 
     m_rectangularPatch->setPoint(1,0, glm::vec3(1,-1,0.5));
     m_rectangularPatch->setPoint(1,1, glm::vec3(1,1,0));
-    m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));
+    m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));*/
 
-    /*m_patch = new BezierPatch_Triangle(3);
+    m_patch = new BezierPatch_Triangle(3);
+    m_patch->setResolution(110);
     m_triangularPatch = static_cast<BezierPatch_Triangle*>(m_patch);
 
     m_triangularPatch->setPoint(0,0,2, glm::vec3(0,1,-0.1));
@@ -35,7 +36,7 @@ void Viewer::tp_init()
 
     m_triangularPatch->setPoint(2,0,0, glm::vec3(-1,-1,0));
     m_triangularPatch->setPoint(1,1,0, glm::vec3(0,-1,0));
-    m_triangularPatch->setPoint(0,2,0, glm::vec3(1,-1,0));*/
+    m_triangularPatch->setPoint(0,2,0, glm::vec3(1,-1,0));
 
 
     // SHADER
@@ -43,12 +44,22 @@ void Viewer::tp_init()
 
     //VBO
     glGenBuffers(1, &m_vbo_id);
+
+    //EBO
+    glGenBuffers(1, &m_ebo_id);
+
     // genere 1 VAO
-    m_patch->makeVBO(m_vbo_id);
-    m_patch->updateVBO_CP(m_vbo_id);
     glGenVertexArrays(1, &m_Vao);
+
     // on travaille sur celui-ci
     glBindVertexArray(m_Vao);
+
+    m_patch->makeVBO(m_vbo_id, m_ebo_id);
+    m_patch->updateVBO_CP(m_vbo_id, m_ebo_id);
+
+    //associe l'ebo
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo_id);
+
     // associe le VBO de position
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo_id);
     // avec l'attribut position du shader
@@ -56,6 +67,7 @@ void Viewer::tp_init()
     // en donne les bon parametre (idAttrib, 3 x float / sommets, pas de normalisation,
     // et 0, 0 : on ne saute rien et on commence au debut)
     glVertexAttribPointer(m_ShaderProgram->idOfVertexAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
     //vao fini
     glBindVertexArray(0);
 }
@@ -84,6 +96,7 @@ void Viewer::init()
     setSceneCenter(qglviewer::Vec(0.0,0.0,0.0));
     camera()->showEntireScene();
 
+    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 }
 
 void Viewer::drawPatchLines()
@@ -129,10 +142,10 @@ void Viewer::draw()
 
         drawPatchLines();
 
-        drawPatchControlPoints();
-
         if(m_drawBezier)
             drawPatchBezier();
+
+        drawPatchControlPoints();
 
         glBindVertexArray(0);
 
@@ -142,7 +155,7 @@ void Viewer::draw()
 
 void Viewer::updatePatch()
 {
-    m_patch->updateVBO_CP(m_vbo_id);
+    m_patch->updateVBO_CP(m_vbo_id, m_ebo_id);
     m_drawBezier=false; //bezier CPs have changed, thus the bezier surface isn't valide anymore
 
     updateGL();
@@ -156,7 +169,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 		break;
 
         case Qt::Key_B:
-            m_patch->updateVBO_Bezier(m_vbo_id);
+            m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
             m_drawBezier=true;
             break;
 
@@ -171,7 +184,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
-    if((m_selectedCP=m_patch->rayIntersectsCP(m_origin, m_direction, 0.6, m_distanceSelection))==NULL)
+    if((m_selectedCP=m_patch->rayIntersectsCP(m_origin, m_direction, 0.06, m_distanceSelection))==NULL)
         QGLViewer::mousePressEvent(e);
 }
 

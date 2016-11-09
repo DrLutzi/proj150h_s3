@@ -64,6 +64,8 @@ protected:
     GLuint m_Vao;
     /// id de VBO pour les positions et les lignes des CP
     GLuint m_vbo_id;
+    /// id de IBO pour desiner les triangles/lignes
+    GLuint m_ebo_id;
     /// patch de bezier dans sa version rectangulaire
     BezierPatch_Rectangle *m_rectangularPatch;
     /// patch de bezier dans sa version triangulaire

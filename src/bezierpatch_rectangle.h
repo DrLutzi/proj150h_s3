@@ -23,15 +23,14 @@ public:
 
     //others
 
-    void drawLines() const;
-    void drawBezier() const;
+    void drawLines(GLint first, GLint baseVertex=0) const;
+    void drawBezier(GLint first, GLint baseVertex=0) const;
 
 protected:
 
-    virtual const glm::vec3 &casteljau(float u, float v);
+    const glm::vec3 &casteljau(float u, float v);
 
     void makeVBOLines();
-
     void makeVBOBezierDeCasteljau();
 
     glm::vec3 &getTmpCasteljau(size_t i, size_t j);
@@ -40,6 +39,8 @@ private:
 
     size_t m_sizeM;
     size_t m_sizeN;
+
+    std::vector<glm::vec3> m_tmpCasteljau;
 };
 
 class BezierPatch_Square : public BezierPatch_Rectangle
