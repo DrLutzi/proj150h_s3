@@ -4,7 +4,6 @@
 
 void Viewer::tp_init()
 {
-    setFPSIsDisplayed();
     m_oldMousePos=QPoint(0,0);
     m_deltaPos=QPoint(0,0);
     m_selectedCP=NULL;
@@ -13,7 +12,7 @@ void Viewer::tp_init()
     // genere les donnees a afficher
 
     /*m_patch = new BezierPatch_Rectangle(2,3);
-    m_patch->setResolution(11);
+    m_patch->setResolution(30);
     m_rectangularPatch = static_cast<BezierPatch_Rectangle*>(m_patch);
 
     m_rectangularPatch->setPoint(0,0, glm::vec3(-1,-1,-0.5));
@@ -23,10 +22,10 @@ void Viewer::tp_init()
 
     m_rectangularPatch->setPoint(1,0, glm::vec3(1,-1,0.5));
     m_rectangularPatch->setPoint(1,1, glm::vec3(1,1,0));
-    m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));*/
-
+    m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));
+    */
     m_patch = new BezierPatch_Triangle(3);
-    m_patch->setResolution(110);
+    m_patch->setResolution(50);
     m_triangularPatch = static_cast<BezierPatch_Triangle*>(m_patch);
 
     m_triangularPatch->setPoint(0,0,2, glm::vec3(0,1,-0.1));
@@ -142,10 +141,10 @@ void Viewer::draw()
 
         drawPatchLines();
 
+                drawPatchControlPoints();
+
         if(m_drawBezier)
             drawPatchBezier();
-
-        drawPatchControlPoints();
 
         glBindVertexArray(0);
 
@@ -156,7 +155,8 @@ void Viewer::draw()
 void Viewer::updatePatch()
 {
     m_patch->updateVBO_CP(m_vbo_id, m_ebo_id);
-    m_drawBezier=false; //bezier CPs have changed, thus the bezier surface isn't valide anymore
+    m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
+    //m_drawBezier=false; //bezier CPs have changed, thus the bezier surface isn't valide anymore
 
     updateGL();
 }
@@ -169,8 +169,9 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 		break;
 
         case Qt::Key_B:
-            m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
-            m_drawBezier=true;
+
+            if(m_drawBezier=!m_drawBezier)
+                m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
             break;
 
 	default:
@@ -184,7 +185,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
-    if((m_selectedCP=m_patch->rayIntersectsCP(m_origin, m_direction, 0.06, m_distanceSelection))==NULL)
+    if((m_selectedCP=m_patch->rayIntersectsCP(m_origin, m_direction, 0.1, m_distanceSelection))==NULL)
         QGLViewer::mousePressEvent(e);
 }
 

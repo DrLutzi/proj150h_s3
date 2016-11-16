@@ -41,12 +41,12 @@ public:
 protected:
 
     /**
-     * @brief computes the best patch lines VBO from the patch into m_VBOLines
+     * @brief computes the best patch lines VBO from the patch using an EBO as well.
      */
     virtual void makeVBOLines()=0;
 
     /**
-     * @brief computes the best patch surface or curve VBO from the patch into m_VBOBezier using DeCasteljau
+     * @brief computes the best patch surface or curve VBO from the patch using an EBO as well.
      * @param rate number of points generated to render polygons
      */
     virtual void makeVBOBezierDeCasteljau()=0;

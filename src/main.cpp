@@ -1,5 +1,6 @@
 #include <QApplication>
 #include "viewer.h"
+#include "boost/math/special_functions/factorials.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -11,8 +12,8 @@ int main(int argc, char *argv[])
     glFormat.setSampleBuffers( true );
 	QGLFormat::setDefaultFormat(glFormat);
 
-	Viewer view;
-	view.show();
+    Viewer view;
+    view.show();
 
 	return a.exec();
 

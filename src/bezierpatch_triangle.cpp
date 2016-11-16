@@ -51,7 +51,7 @@ void BezierPatch_Triangle::drawLines(GLint first, GLint baseVertex) const
 
 void BezierPatch_Triangle::drawBezier(GLint first, GLint baseVertex) const
 {
-    glDrawElementsBaseVertex(GL_POINTS, m_EBOBezier.size(), GL_UNSIGNED_INT, (GLvoid*)(getSizeEBOPoints_GPU()+first*sizeof(unsigned int)), baseVertex);
+    glDrawElementsBaseVertex(GL_TRIANGLES, m_EBOBezier.size(), GL_UNSIGNED_INT, (GLvoid*)(getSizeEBOPoints_GPU()+first*sizeof(unsigned int)), m_points.size()+baseVertex);
 }
 
 
@@ -69,12 +69,12 @@ const glm::vec3 &BezierPatch_Triangle::casteljau(float u, float v, float w)
     size_t i=0, j=0, k=0;
     for(setSize=m_size-1; setSize>0; --setSize)
     {
-        for(i=0; i<setSize; ++i)
+        for(k=0; k<setSize; ++k)
         {
-            size_t sizeMinusI=setSize-i;
-            for(j=0; j<sizeMinusI; ++j)
+            size_t sizeMinusK=setSize-k;
+            for(j=0; j<sizeMinusK; ++j)
             {
-                k=sizeMinusI-j-1;
+                i=sizeMinusK-j-1;
                 getTmpCasteljau(i,j,k)= u*getTmpCasteljau(i+1, j, k) + v*getTmpCasteljau(i, j+1, k) + w*getTmpCasteljau(i, j, k+1);
             }
         }
@@ -92,6 +92,7 @@ void BezierPatch_Triangle::makeVBOLines()
         for(size_t j=0; j<getSize()-k-1; ++j) //also read "from left to right"
         {
             //the point iterated, his right neighbor, and top neighbor
+            //this isn't easy to maintain, I might change it later
             m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k]+j;
             m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k]+j+1;
             m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k+1]+j;
@@ -110,16 +111,25 @@ void BezierPatch_Triangle::makeVBOBezierDeCasteljau()
     m_EBOBezier.reserve(cappedResolution*cappedResolution*3);
 
     //calculate entire VBO, from top to bottom, left to right (because why not?)
-    int nope=0;
-    for(size_t i=0; i<cappedResolution; ++i)
+    int eboIndex=0;
+    for(size_t k=0; k<cappedResolution; ++k) //"from bottom to top"
     {
-        for(size_t j=0; j<cappedResolution-i; ++j)
+        for(size_t j=0; j<cappedResolution-k; ++j) //also read "from left to right"
         {
-            size_t k=cappedResolution-i-j-1;
+            size_t i=cappedResolution-k-j-1;
             m_bezier.push_back(casteljau((float)(i)/(cappedResolution-1),
                                          (float)(j)/(cappedResolution-1),
                                          (float)(k)/(cappedResolution-1)));
-            m_EBOBezier.push_back(nope++);
+            //the point created, his right neighbor, and top neighbor.
+            //Here we need to be careful with the borders since we can't use the precomputed vector.
+            if(i!=0)
+            {
+                m_EBOBezier.push_back(eboIndex);
+                m_EBOBezier.push_back(cappedResolution-k+eboIndex);
+                m_EBOBezier.push_back(++eboIndex);
+            }
+            else
+                ++eboIndex;
         }
     }
 }
