@@ -98,23 +98,37 @@ void Viewer::init()
     glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 }
 
+void Viewer::updatePatch()
+{
+    m_patch->updateVBO_CP(m_vbo_id, m_ebo_id);
+    m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
+    //m_drawBezier=false; //bezier CPs have changed, thus the bezier surface isn't valide anymore
+
+    updateGL();
+}
+
+void Viewer::setDrawingColor(const glm::vec4& color)
+{
+    glUniform4f(m_ShaderProgram->idOfColor, color.x, color.y, color.z, color.a);
+}
+
 void Viewer::drawPatchLines()
 {
-    glUniform4f(m_ShaderProgram->idOfColor, 0.7, 0.7, 0.7, 0.0);
+    setDrawingColor(glm::vec4(0.7, 0.7, 0.7, 0.0));
 
     m_patch->drawLines();
 }
 
 void Viewer::drawPatchControlPoints()
 {
-    glUniform4f(m_ShaderProgram->idOfColor, 1.0, 0.1, 0.1, 0.0);
+    setDrawingColor(glm::vec4(1.0, 0.1, 0.1, 0.0));
 
     m_patch->drawControlPoints();
 }
 
 void Viewer::drawPatchBezier()
 {
-    glUniform4f(m_ShaderProgram->idOfColor, 0.3, 0.9, 0.3, 0.0);
+    setDrawingColor(glm::vec4(0.3, 0.9, 0.3, 0.0));
 
     m_patch->drawBezier();
 }
@@ -150,15 +164,6 @@ void Viewer::draw()
 
         m_ShaderProgram->stopUseProgram();
     }
-}
-
-void Viewer::updatePatch()
-{
-    m_patch->updateVBO_CP(m_vbo_id, m_ebo_id);
-    m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
-    //m_drawBezier=false; //bezier CPs have changed, thus the bezier surface isn't valide anymore
-
-    updateGL();
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)

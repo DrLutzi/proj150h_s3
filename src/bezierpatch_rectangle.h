@@ -19,6 +19,7 @@ public:
 
     //set
 
+    void setNbPointsSide(size_t size);
     void setPoint(size_t i, size_t j, const glm::vec3& cp);
 
     //others

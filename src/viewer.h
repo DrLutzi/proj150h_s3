@@ -20,6 +20,9 @@ protected:
 	/// OpenGL intialisation appelee par la QGLViewer
     void init();
 
+    /// set the color
+    void setDrawingColor(const glm::vec4& color);
+
     /// update patch
     void updatePatch();
 

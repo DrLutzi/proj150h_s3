@@ -20,7 +20,7 @@ public:
     void updateVBO_CP(GLint vboId, GLint eboId);
     void updateVBO_Bezier(GLint vboId, GLint eboId);
 
-    void setResolution(size_t resolution);
+    virtual void setResolution(size_t resolution);
 
     virtual void drawLines(GLint first=0, GLint baseVertex=0) const=0;
     virtual void drawBezier(GLint first=0, GLint baseVertex=0) const;
