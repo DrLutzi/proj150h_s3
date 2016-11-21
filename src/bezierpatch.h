@@ -21,6 +21,7 @@ public:
     void updateVBO_Bezier(GLint vboId, GLint eboId);
 
     virtual void setResolution(size_t resolution);
+    virtual void clear();
 
     virtual void drawLines(GLint first=0, GLint baseVertex=0) const=0;
     virtual void drawBezier(GLint first=0, GLint baseVertex=0) const;
@@ -39,6 +40,18 @@ public:
     glm::vec3* rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float &distance) const;
 
 protected:
+
+    typedef std::vector<glm::vec3>::iterator iterator;
+    typedef std::vector<glm::vec3>::const_iterator const_iterator;
+
+    /**
+     * @brief describes the operations for iterating over m_points. This shouldn't be used outside of the class and its derivations.
+     */
+    inline iterator begin();
+    inline const_iterator begin() const;
+
+    inline iterator end();
+    inline const_iterator end() const;
 
     /**
      * @brief computes the best patch lines VBO from the patch using an EBO as well.

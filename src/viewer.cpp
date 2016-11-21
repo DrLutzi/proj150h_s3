@@ -11,9 +11,8 @@ void Viewer::tp_init()
     setMouseTracking(true);
     // genere les donnees a afficher
 
-    /*m_patch = new BezierPatch_Rectangle(2,3);
-    m_patch->setResolution(30);
-    m_rectangularPatch = static_cast<BezierPatch_Rectangle*>(m_patch);
+    m_rectangularPatch = new BezierPatch_Rectangle(2,3);
+    m_rectangularPatch->setResolution(30);
 
     m_rectangularPatch->setPoint(0,0, glm::vec3(-1,-1,-0.5));
     m_rectangularPatch->setPoint(0,1, glm::vec3(-1,1,-0.1));
@@ -23,10 +22,9 @@ void Viewer::tp_init()
     m_rectangularPatch->setPoint(1,0, glm::vec3(1,-1,0.5));
     m_rectangularPatch->setPoint(1,1, glm::vec3(1,1,0));
     m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));
-    */
-    m_patch = new BezierPatch_Triangle(3);
-    m_patch->setResolution(50);
-    m_triangularPatch = static_cast<BezierPatch_Triangle*>(m_patch);
+
+    m_triangularPatch = new BezierPatch_Triangle(3);
+    m_triangularPatch->setResolution(50);
 
     m_triangularPatch->setPoint(0,0,2, glm::vec3(0,1,-0.1));
 
@@ -37,6 +35,7 @@ void Viewer::tp_init()
     m_triangularPatch->setPoint(1,1,0, glm::vec3(0,-1,0));
     m_triangularPatch->setPoint(0,2,0, glm::vec3(1,-1,0));
 
+    m_patch = m_rectangularPatch;
 
     // SHADER
     m_ShaderProgram = new ShaderProgramBezier();
@@ -71,8 +70,6 @@ void Viewer::tp_init()
     glBindVertexArray(0);
 }
 
-
-
 void Viewer::init()
 {
     makeCurrent();
@@ -98,11 +95,21 @@ void Viewer::init()
     glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 }
 
+void Viewer::rectangularPatch2UpperTrianglePatch()
+{
+    delete m_triangularPatch;
+    m_triangularPatch = new BezierPatch_Triangle(m_rectangularPatch->getSizeM()+m_rectangularPatch->getSizeN()-1);
+    RPatch2TPatchSolver solver(m_rectangularPatch->getSizeM()-1, m_rectangularPatch->getSizeN()-1);
+    (*m_triangularPatch)=solver.solveFrom((*m_rectangularPatch), RPatch2TPatchSolver::Solver_UpperTriangle);
+    m_triangularPatch->setResolution(50);
+    m_patch = m_triangularPatch;
+    updatePatch();
+}
+
 void Viewer::updatePatch()
 {
     m_patch->updateVBO_CP(m_vbo_id, m_ebo_id);
     m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
-    //m_drawBezier=false; //bezier CPs have changed, thus the bezier surface isn't valide anymore
 
     updateGL();
 }
@@ -179,8 +186,24 @@ void Viewer::keyPressEvent(QKeyEvent *e)
                 m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
             break;
 
-	default:
-		break;
+        case Qt::Key_D:
+
+            rectangularPatch2UpperTrianglePatch();
+            break;
+
+        case Qt::Key_S:
+            if(m_patch==m_triangularPatch)
+            {
+                m_patch=m_rectangularPatch;
+            }
+            else if(m_patch==m_rectangularPatch)
+            {
+                m_patch=m_triangularPatch;
+            }
+            updatePatch();
+
+        default:
+            break;
 	}
 
 	// retrace la fenetre

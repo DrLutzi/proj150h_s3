@@ -7,7 +7,13 @@ BezierPatch::BezierPatch() : m_points(0), m_EBOPoints(0), m_bezier(0), m_resolut
 }
 
 BezierPatch::BezierPatch(size_t sizePatch, size_t sizeEBOPoints) : m_points(sizePatch), m_EBOPoints(sizeEBOPoints), m_bezier(), m_EBOBezier(), m_resolution(0)
-{}
+{
+    //initialisation of every points at 0
+    for(iterator it=m_points.begin(); it!=m_points.end(); ++it)
+    {
+        (*it)=glm::vec3(0,0,0);
+    }
+}
 
 BezierPatch::~BezierPatch()
 {}
@@ -68,6 +74,14 @@ void BezierPatch::setResolution(size_t resolution)
     m_resolution=resolution;
 }
 
+void BezierPatch::clear()
+{
+    for(iterator it=m_points.begin(); it!=m_points.end(); ++it)
+    {
+        (*it)=glm::vec3(0,0,0);
+    }
+}
+
 glm::vec3 *BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float& distance) const
 {
     float oldR=r;
@@ -105,6 +119,29 @@ void BezierPatch::drawBezier(GLint first, GLint baseVertex) const
 
 //////////////////////PROTECTED////////////////////////////
 
+
+//iterators
+BezierPatch::iterator BezierPatch::begin()
+{
+    return m_points.begin();
+}
+
+BezierPatch::const_iterator BezierPatch::begin() const
+{
+    return m_points.begin();
+}
+
+BezierPatch::iterator BezierPatch::end()
+{
+    return m_points.end();
+}
+
+BezierPatch::const_iterator BezierPatch::end() const
+{
+    return m_points.end();
+}
+
+//others
 GLsizeiptr BezierPatch::getSizeVBOPoints_GPU() const
 {
     return 3 * m_points.size() * sizeof(GLfloat);

@@ -1,6 +1,6 @@
 % here define o1 and o2 as orders of bezier surfaces
-o1=3;
-o2=3;
+o1=1;
+o2=2;
 
 n1 = o1 + 1;
 n2 = o2 + 1;
@@ -24,7 +24,7 @@ for j1_Index = 1:n1
     end
 end
 
-disp(expand(GCoefs));
+disp(expand(transpose(GCoefs)));
 
 %lower part of the triangle
 TCoefs = sym('tc', [nT nT]);
@@ -34,8 +34,8 @@ for i3_Index = 1:nT
         i1=i1_Index-1;
         i2=i2_Index-1;
         i3=i3_Index-1;
-        TCoefs(i1_Index, i3_Index) = T(i1_Index, i3_Index) * (factorial(oT)/(factorial(i1)*factorial(i2)*factorial(i3))) * a.^(i1) * b.^(i2) * c.^(i3);
+        TCoefs(i1_Index, i2_Index) = T(i1_Index, i2_Index) * (factorial(oT)/(factorial(i1)*factorial(i2)*factorial(i3))) * a.^(i1) * b.^(i2) * c.^(i3);
     end
 end
 
-disp(expand(TCoefs));
+disp(expand(transpose(TCoefs)));

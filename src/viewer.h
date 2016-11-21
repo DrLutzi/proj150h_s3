@@ -5,8 +5,7 @@
 #include <QGLViewer/qglviewer.h>
 #include <glm/glm.hpp>
 #include <ShaderProgramBezier.h>
-#include "bezierpatch_rectangle.h"
-#include "bezierpatch_triangle.h"
+#include "rpatch2tpatchsolver.h"
 
 
 /**
@@ -19,6 +18,9 @@ class Viewer : public QGLViewer
 protected:
 	/// OpenGL intialisation appelee par la QGLViewer
     void init();
+
+    /// transforms rectangular patch into one upper triangular patch
+    void rectangularPatch2UpperTrianglePatch();
 
     /// set the color
     void setDrawingColor(const glm::vec4& color);
