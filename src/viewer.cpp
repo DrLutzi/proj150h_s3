@@ -6,13 +6,14 @@ void Viewer::tp_init()
 {
     m_oldMousePos=QPoint(0,0);
     m_deltaPos=QPoint(0,0);
-    m_selectedCP=NULL;
+    m_selectedCP=false;
+    m_drawSurfaces=false;
 
     setMouseTracking(true);
     // genere les donnees a afficher
 
     m_rectangularPatch = new BezierPatch_Rectangle(2,3);
-    m_rectangularPatch->setResolution(30);
+    m_rectangularPatch->setResolution(10);
 
     m_rectangularPatch->setPoint(0,0, glm::vec3(-1,-1,-0.5));
     m_rectangularPatch->setPoint(0,1, glm::vec3(-1,1,-0.1));
@@ -23,19 +24,32 @@ void Viewer::tp_init()
     m_rectangularPatch->setPoint(1,1, glm::vec3(1,1,0));
     m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));
 
+    m_rectangularPatch->setSurfaceColor(glm::vec4(0.2, 0.9, 0.2, 1.0));
+    m_rectangularPatch->setPatchColor(glm::vec4(0.5, 0.7, 0.5, 1.0));
+    m_rectangularPatch->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
+
+    m_rectangularPatch->showPatch();
+
+    //////////////////////////////////
+
     m_triangularPatch = new BezierPatch_Triangle(3);
-    m_triangularPatch->setResolution(50);
+    m_triangularPatch->setResolution(10);
 
-    m_triangularPatch->setPoint(0,0,2, glm::vec3(0,1,-0.1));
+    m_triangularPatch->setPoint(0,0,2, glm::vec3(3,1,-0.1));
 
-    m_triangularPatch->setPoint(1,0,1, glm::vec3(-0.5,0,0.1));
-    m_triangularPatch->setPoint(0,1,1, glm::vec3(0.5,0,-0.2));
+    m_triangularPatch->setPoint(1,0,1, glm::vec3(2.5,0,0.1));
+    m_triangularPatch->setPoint(0,1,1, glm::vec3(3.5,0,-0.2));
 
-    m_triangularPatch->setPoint(2,0,0, glm::vec3(-1,-1,0));
-    m_triangularPatch->setPoint(1,1,0, glm::vec3(0,-1,0));
-    m_triangularPatch->setPoint(0,2,0, glm::vec3(1,-1,0));
+    m_triangularPatch->setPoint(2,0,0, glm::vec3(2,-1,0));
+    m_triangularPatch->setPoint(1,1,0, glm::vec3(3,-1,0));
+    m_triangularPatch->setPoint(0,2,0, glm::vec3(4,-1,0));
 
-    m_patch = m_rectangularPatch;
+    m_triangularPatch->setSurfaceColor(glm::vec4(0.7, 0.2, 0.3, 1.0));
+    m_triangularPatch->setPatchColor(glm::vec4(0.7, 0.5, 0.7, 1.0));
+    m_triangularPatch->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
+
+    m_triangularPatch->showPatch();
+
 
     // SHADER
     m_ShaderProgram = new ShaderProgramBezier();
@@ -52,9 +66,6 @@ void Viewer::tp_init()
     // on travaille sur celui-ci
     glBindVertexArray(m_Vao);
 
-    m_patch->makeVBO(m_vbo_id, m_ebo_id);
-    m_patch->updateVBO_CP(m_vbo_id, m_ebo_id);
-
     //associe l'ebo
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo_id);
 
@@ -68,6 +79,11 @@ void Viewer::tp_init()
 
     //vao fini
     glBindVertexArray(0);
+
+    m_manager = new BezierPatch_Manager(m_Vao, m_vbo_id, m_ebo_id, m_ShaderProgram->idOfColor);
+
+    m_manager->append(m_rectangularPatch, false);
+    m_manager->append(m_triangularPatch);
 }
 
 void Viewer::init()
@@ -97,47 +113,28 @@ void Viewer::init()
 
 void Viewer::rectangularPatch2UpperTrianglePatch()
 {
-    delete m_triangularPatch;
-    m_triangularPatch = new BezierPatch_Triangle(m_rectangularPatch->getSizeM()+m_rectangularPatch->getSizeN()-1);
-    RPatch2TPatchSolver solver(m_rectangularPatch->getSizeM()-1, m_rectangularPatch->getSizeN()-1);
-    (*m_triangularPatch)=solver.solveFrom((*m_rectangularPatch), RPatch2TPatchSolver::Solver_UpperTriangle);
-    m_triangularPatch->setResolution(50);
-    m_patch = m_triangularPatch;
-    updatePatch();
-}
+    BezierPatch_Triangle *upperT = new BezierPatch_Triangle;
+    BezierPatch_Triangle *lowerT = new BezierPatch_Triangle;
 
-void Viewer::updatePatch()
-{
-    m_patch->updateVBO_CP(m_vbo_id, m_ebo_id);
-    m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
+    RPatch2TPatchSolver solver(m_rectangularPatch->sizeM()-1, m_rectangularPatch->sizeN()-1);
 
-    updateGL();
-}
+    (*upperT)=solver.solveFrom((*m_rectangularPatch), RPatch2TPatchSolver::Solver_LowerTriangle);
+    (*lowerT)=solver.solveFrom((*m_rectangularPatch), RPatch2TPatchSolver::Solver_UpperTriangle);
 
-void Viewer::setDrawingColor(const glm::vec4& color)
-{
-    glUniform4f(m_ShaderProgram->idOfColor, color.x, color.y, color.z, color.a);
-}
+    upperT->setResolution(10);
+    upperT->showPatch();
+    upperT->setPatchColor(glm::vec4(0.5, 0.5, 0.7, 1.0));
+    upperT->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
+    upperT->setSurfaceColor(glm::vec4(0.2, 0.2, 0.7, 1.0));
 
-void Viewer::drawPatchLines()
-{
-    setDrawingColor(glm::vec4(0.7, 0.7, 0.7, 0.0));
+    lowerT->setResolution(10);
+    lowerT->showPatch();
+    lowerT->setPatchColor(glm::vec4(0.5, 0.5, 0.7, 1.0));
+    lowerT->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
+    lowerT->setSurfaceColor(glm::vec4(0.2, 0.2, 0.7, 1.0));
 
-    m_patch->drawLines();
-}
-
-void Viewer::drawPatchControlPoints()
-{
-    setDrawingColor(glm::vec4(1.0, 0.1, 0.1, 0.0));
-
-    m_patch->drawControlPoints();
-}
-
-void Viewer::drawPatchBezier()
-{
-    setDrawingColor(glm::vec4(0.3, 0.9, 0.3, 0.0));
-
-    m_patch->drawBezier();
+    m_manager->append(upperT, false);
+    m_manager->append(lowerT, true);
 }
 
 void Viewer::draw()
@@ -160,12 +157,7 @@ void Viewer::draw()
         glPointSize(4.0); // clair !!
         glLineWidth(2.0);
 
-        drawPatchLines();
-
-                drawPatchControlPoints();
-
-        if(m_drawBezier)
-            drawPatchBezier();
+        m_manager->drawScene();
 
         glBindVertexArray(0);
 
@@ -182,25 +174,19 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 
         case Qt::Key_B:
 
-            if(m_drawBezier=!m_drawBezier)
-                m_patch->updateVBO_Bezier(m_vbo_id, m_ebo_id);
+            m_drawSurfaces=!m_drawSurfaces;
+            for(BezierPatch_Manager::iterator it=m_manager->begin(); it!=m_manager->end(); ++it)
+            {
+                BezierPatch *patch=(*it);
+                patch->setDrawSurface(m_drawSurfaces);
+            }
+            m_manager->remakeScene();
             break;
 
         case Qt::Key_D:
 
             rectangularPatch2UpperTrianglePatch();
             break;
-
-        case Qt::Key_S:
-            if(m_patch==m_triangularPatch)
-            {
-                m_patch=m_rectangularPatch;
-            }
-            else if(m_patch==m_rectangularPatch)
-            {
-                m_patch=m_triangularPatch;
-            }
-            updatePatch();
 
         default:
             break;
@@ -213,13 +199,15 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
-    if((m_selectedCP=m_patch->rayIntersectsCP(m_origin, m_direction, 0.1, m_distanceSelection))==NULL)
+    float r=0.1;
+    if(!(m_selectedCP=m_manager->rayIntersectsCP(m_origin, m_direction, r, m_distanceSelection)))
         QGLViewer::mousePressEvent(e);
 }
 
 void Viewer::mouseReleaseEvent(QMouseEvent *e)
 {
-    m_selectedCP=NULL;
+    m_selectedCP=false;
+    m_manager->releaseSelectedCP();
 
     QGLViewer::mouseReleaseEvent(e);
 }
@@ -234,14 +222,11 @@ void Viewer::mouseMoveEvent(QMouseEvent *e)
     m_deltaPos=e->pos()-m_oldMousePos;
     m_oldMousePos=e->pos();
 
-    if(m_selectedCP!=NULL)
+    if(m_selectedCP)
     {
- //       if(m_deltaPos.x()!=0 || m_deltaPos.y()!=0)
-        {
-            *m_selectedCP=m_origin+m_direction*m_distanceSelection;
-
-            updatePatch();
-        }
+        m_manager->updateSelectedCP(m_origin+m_direction*m_distanceSelection);
+        m_manager->updateScene();
+        updateGL();
     }
     else
     {

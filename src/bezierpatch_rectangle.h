@@ -12,27 +12,30 @@ public:
 
     //get
 
-    size_t getSizeM() const;
-    size_t getSizeN() const;
+    size_t sizeM() const;
+    size_t sizeN() const;
 
     const glm::vec3 &getPoint(size_t i, size_t j) const;
 
     //set
 
-    void setNbPointsSide(size_t size);
     void setPoint(size_t i, size_t j, const glm::vec3& cp);
 
-    //others
+    void makePatch();
+    void makeSurfaceDeCasteljau();
 
-    void drawLines(GLint first, GLint baseVertex=0) const;
-    void drawBezier(GLint first, GLint baseVertex=0) const;
+    //operators
+
+    BezierPatch_Rectangle& operator=(const BezierPatch_Rectangle &other);
 
 protected:
 
-    const glm::vec3 &casteljau(float u, float v);
+    //others
 
-    void makeVBOLines();
-    void makeVBOBezierDeCasteljau();
+    void drawPatch() const;
+    void drawSurface() const;
+
+    const glm::vec3 &casteljau(float u, float v);
 
     glm::vec3 &getTmpCasteljau(size_t i, size_t j);
 
@@ -42,13 +45,6 @@ private:
     size_t m_sizeN;
 
     std::vector<glm::vec3> m_tmpCasteljau;
-};
-
-class BezierPatch_Square : public BezierPatch_Rectangle
-{
-    BezierPatch_Square();
-    BezierPatch_Square(size_t size);
-    virtual ~BezierPatch_Square();
 };
 
 #endif // BEZIERPATCH_RECTANGLE_H

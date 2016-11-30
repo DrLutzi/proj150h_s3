@@ -5,7 +5,7 @@
 #include <QGLViewer/qglviewer.h>
 #include <glm/glm.hpp>
 #include <ShaderProgramBezier.h>
-#include "rpatch2tpatchsolver.h"
+#include "bezierpatch_manager.h"
 
 
 /**
@@ -21,21 +21,6 @@ protected:
 
     /// transforms rectangular patch into one upper triangular patch
     void rectangularPatch2UpperTrianglePatch();
-
-    /// set the color
-    void setDrawingColor(const glm::vec4& color);
-
-    /// update patch
-    void updatePatch();
-
-    ///dessine les lignes d'un patch
-    void drawPatchLines();
-
-    ///dessine les points de controle du patch
-    void drawPatchControlPoints();
-
-    ///dessine la surface/courbe de Bézier définie par le patch
-    void drawPatchBezier();
 
 	/// draw callback de la QGLViewer
     void draw();
@@ -76,21 +61,20 @@ protected:
     /// patch de bezier dans sa version triangulaire
     BezierPatch_Triangle *m_triangularPatch;
     /// patch uniforme
-    BezierPatch *m_patch;
+    BezierPatch_Manager *m_manager;
     /// shader prg
     ShaderProgramBezier* m_ShaderProgram;
 
 private:
 
     glm::vec3 m_origin, m_direction;
-    /// Cp sélectionné (NULL/Cp)
-    glm::vec3 *m_selectedCP;
+    bool m_selectedCP;
     /// old mouse position, for computing differences
     QPoint m_oldMousePos, m_deltaPos;
     /// distance between camera and selected point
     float m_distanceSelection;
     /// compute bezier surface for next frame
-    bool m_drawBezier;
+    bool m_drawSurfaces;
 };
 
 #endif

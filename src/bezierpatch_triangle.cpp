@@ -4,9 +4,8 @@ BezierPatch_Triangle::BezierPatch_Triangle() : BezierPatch(), m_size(0)
 {
 }
 
-BezierPatch_Triangle::BezierPatch_Triangle(size_t n) : BezierPatch(((n)*(n+1))/2, std::max((size_t)0, (( ((n)*(n-1))/2))*3)), m_size(n), m_precomputedSums_NMinusK(n), m_tmpCasteljau(m_points.size())
+BezierPatch_Triangle::BezierPatch_Triangle(size_t n) : BezierPatch(((n)*(n+1))/2), m_size(n), m_tmpCasteljau(m_points.size())
 {
-    fillSums_NMinusK();
 }
 
 BezierPatch_Triangle::~BezierPatch_Triangle()
@@ -18,10 +17,10 @@ BezierPatch_Triangle::~BezierPatch_Triangle()
 const glm::vec3 &BezierPatch_Triangle::getPoint(size_t i, size_t j, size_t k) const
 {
     if(i+j+k!=m_size-1); //TODO
-    return m_points[m_precomputedSums_NMinusK[k]+j];
+    return m_points[accessValue(k)+j];
 }
 
-size_t BezierPatch_Triangle::getSize() const
+size_t BezierPatch_Triangle::size() const
 {
     return m_size;
 }
@@ -31,31 +30,102 @@ size_t BezierPatch_Triangle::getSize() const
 void BezierPatch_Triangle::setPoint(size_t i, size_t j, size_t k, const glm::vec3 &cp)
 {
     if(i+j+k!=m_size-1); //TODO
-    m_points[m_precomputedSums_NMinusK[k]+j]=cp;
+    m_points[accessValue(k)+j]=cp;
+
+    notifyPatchChanged();
 }
 
-//others
-
-
-
-//draw functions
-
-void BezierPatch_Triangle::drawLines(GLint first, GLint baseVertex) const
+void BezierPatch_Triangle::makePatch()
 {
-    GLint polygonMode[2];
-    glGetIntegerv(GL_POLYGON_MODE, polygonMode);
-    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-    glDrawElementsBaseVertex(GL_TRIANGLES, m_EBOPoints.size(), GL_UNSIGNED_INT, (GLvoid*)(first*sizeof(unsigned int)), 0+baseVertex);
-    glPolygonMode(polygonMode[0], polygonMode[1]);
+    int eboIndex=0;
+    //the size of the EBO is 3 times the number of times we draw a triangle while going an axis.
+    //the axis are i, j and k, obviously.
+    m_EBOPoints.resize(std::max(  (size_t)0, (( ((size())*(size()-1)) /2 )) * 3)  );
+
+    //we construct this triangle by triangle
+    for(size_t k=0; k<size()-1; ++k) //"from bottom to top"
+    {
+        for(size_t j=0; j<size()-k-1; ++j) //also read "from left to right"
+        {
+            //the point iterated, his right neighbor, and top neighbor
+            m_EBOPoints[eboIndex++]=accessValue(k)+j;
+            m_EBOPoints[eboIndex++]=accessValue(k)+j+1;
+            m_EBOPoints[eboIndex++]=accessValue(k+1)+j;
+        }
+    }
 }
 
-void BezierPatch_Triangle::drawBezier(GLint first, GLint baseVertex) const
+void BezierPatch_Triangle::makeSurfaceDeCasteljau()
 {
-    glDrawElementsBaseVertex(GL_TRIANGLES, m_EBOBezier.size(), GL_UNSIGNED_INT, (GLvoid*)(getSizeEBOPoints_GPU()+first*sizeof(unsigned int)), m_points.size()+baseVertex);
+    size_t cappedResolution=std::max(size_t(2), m_resolution);
+
+    m_surface.resize(0);
+    m_surface.reserve(cappedResolution*cappedResolution);
+
+    m_EBOSurface.resize(0);
+    m_EBOSurface.reserve(cappedResolution*cappedResolution*3);
+
+    //calculate entire VBO, from top to bottom, left to right (because why not?)
+    int eboIndex=0;
+    for(size_t k=0; k<cappedResolution; ++k) //"from bottom to top"
+    {
+        for(size_t j=0; j<cappedResolution-k; ++j) //also read "from left to right"
+        {
+            size_t i=cappedResolution-k-j-1;
+            m_surface.push_back(casteljau((float)(i)/(cappedResolution-1),
+                                         (float)(j)/(cappedResolution-1),
+                                         (float)(k)/(cappedResolution-1)));
+            //the point created, his right neighbor, and top neighbor.
+            //Here we need to be careful with the borders since we can't use the precomputed vector.
+            if(i!=0)
+            {
+                m_EBOSurface.push_back(eboIndex);
+                m_EBOSurface.push_back(cappedResolution-k+eboIndex);
+                m_EBOSurface.push_back(++eboIndex);
+            }
+            else
+                ++eboIndex;
+        }
+    }
+}
+
+//operators
+
+BezierPatch_Triangle& BezierPatch_Triangle::operator=(const BezierPatch_Triangle& other)
+{
+    if(&other!=this)
+    {
+        m_size=other.size();
+        BezierPatch::operator=(other);
+        m_tmpCasteljau.resize(m_points.size());
+    }
+    return (*this);
 }
 
 
 //////////////////////PROTECTED////////////////////////////
+
+//draw functions
+
+void BezierPatch_Triangle::drawPatch() const
+{
+    if(!m_drawPatch)
+        return;
+
+    GLint polygonMode[2];
+    glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+    glDrawElementsBaseVertex(GL_TRIANGLES, m_EBOPoints.size(), GL_UNSIGNED_INT, (GLvoid*)(m_firstEBO), 0+m_baseVertexEBO);
+    glPolygonMode(polygonMode[0], polygonMode[1]);
+}
+
+void BezierPatch_Triangle::drawSurface() const
+{
+    if(!m_drawSurface)
+        return;
+
+    glDrawElementsBaseVertex(GL_TRIANGLES, m_EBOSurface.size(), GL_UNSIGNED_INT, (GLvoid*)(m_firstEBO+getSizeEBOPosition()), m_points.size()+m_baseVertexEBO);
+}
 
 const glm::vec3 &BezierPatch_Triangle::casteljau(float u, float v, float w)
 {
@@ -82,73 +152,14 @@ const glm::vec3 &BezierPatch_Triangle::casteljau(float u, float v, float w)
     return m_tmpCasteljau[0];
 }
 
-void BezierPatch_Triangle::makeVBOLines()
-{
-    int eboIndex=0;
-
-    //construction triangle par triangle
-    for(size_t k=0; k<getSize()-1; ++k) //"from bottom to top"
-    {
-        for(size_t j=0; j<getSize()-k-1; ++j) //also read "from left to right"
-        {
-            //the point iterated, his right neighbor, and top neighbor
-            //this isn't easy to maintain, I might change it later
-            m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k]+j;
-            m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k]+j+1;
-            m_EBOPoints[eboIndex++]=m_precomputedSums_NMinusK[k+1]+j;
-        }
-    }
-}
-
-void BezierPatch_Triangle::makeVBOBezierDeCasteljau()
-{
-    size_t cappedResolution=std::max(size_t(2), m_resolution);
-
-    m_bezier.resize(0);
-    m_bezier.reserve(cappedResolution*cappedResolution);
-
-    m_EBOBezier.resize(0);
-    m_EBOBezier.reserve(cappedResolution*cappedResolution*3);
-
-    //calculate entire VBO, from top to bottom, left to right (because why not?)
-    int eboIndex=0;
-    for(size_t k=0; k<cappedResolution; ++k) //"from bottom to top"
-    {
-        for(size_t j=0; j<cappedResolution-k; ++j) //also read "from left to right"
-        {
-            size_t i=cappedResolution-k-j-1;
-            m_bezier.push_back(casteljau((float)(i)/(cappedResolution-1),
-                                         (float)(j)/(cappedResolution-1),
-                                         (float)(k)/(cappedResolution-1)));
-            //the point created, his right neighbor, and top neighbor.
-            //Here we need to be careful with the borders since we can't use the precomputed vector.
-            if(i!=0)
-            {
-                m_EBOBezier.push_back(eboIndex);
-                m_EBOBezier.push_back(cappedResolution-k+eboIndex);
-                m_EBOBezier.push_back(++eboIndex);
-            }
-            else
-                ++eboIndex;
-        }
-    }
-}
-
 glm::vec3 &BezierPatch_Triangle::getTmpCasteljau(size_t i, size_t j, size_t k)
 {
-    //this might seem odd, but we can show on the paper that it works for casteljau
-    //as straight forward as this as long as the vector has the size of m_points
-    return m_tmpCasteljau[m_precomputedSums_NMinusK[k]+j];
+    return m_tmpCasteljau[accessValue(k)+j];
 }
 
 //////////////////////PRIVATE////////////////////////////
 
-void BezierPatch_Triangle::fillSums_NMinusK()
+unsigned int BezierPatch_Triangle::accessValue(unsigned int k) const
 {
-    unsigned int currentValue=0;
-    for(size_t k=0; k<m_size; ++k)
-    {
-        m_precomputedSums_NMinusK[k]=currentValue;
-        currentValue+=(unsigned int)m_size-k;
-    }
+    return k!=0 ? m_size*k - (k*(k-1))/2 : 0;
 }

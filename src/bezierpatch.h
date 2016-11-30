@@ -4,92 +4,202 @@
 #include "glm/glm.hpp"
 #include <GL/glew.h>
 #include <vector>
-
-#include <QDebug>
+#include <string>
 
 class BezierPatch
 {
 public:
     BezierPatch();
-    BezierPatch(size_t sizePatch, size_t sizeEBOPoints);
+    BezierPatch(size_t sizePatch);
     ~BezierPatch();
 
-    size_t getNumberOfPoints() const;
+    //inline
+    //show and hide patch or surface
 
-    void makeVBO(GLint vboId, GLint eboId);
-    void updateVBO_CP(GLint vboId, GLint eboId);
-    void updateVBO_Bezier(GLint vboId, GLint eboId);
+    inline void setDrawPatch(bool draw){m_drawPatch=draw; if(m_drawPatch) makePatch();}
+    inline void setDrawSurface(bool draw){m_drawSurface=draw; if(m_drawSurface) makeSurfaceDeCasteljau();}
 
-    virtual void setResolution(size_t resolution);
-    virtual void clear();
+    inline bool isDrawPatch() const {return m_drawPatch;}
+    inline bool isDrawSurface() const {return m_drawSurface;}
 
-    virtual void drawLines(GLint first=0, GLint baseVertex=0) const=0;
-    virtual void drawBezier(GLint first=0, GLint baseVertex=0) const;
-    virtual void drawControlPoints(GLint first=0, GLint baseVertex=0) const;
+    inline void toggleDrawPatch(){m_drawPatch=!m_drawPatch; if(m_drawPatch) makePatch();}
+    inline void toggleDrawSurface(){m_drawSurface=!m_drawSurface; if(m_drawSurface) makeSurfaceDeCasteljau();}
+
+    inline void hidePatch(){m_drawPatch=false;}
+    inline void hideSurface(){m_drawSurface=false;}
+
+    inline void showPatch(){m_drawPatch=true; makePatch();}
+    inline void showSurface(){m_drawSurface=true; makeSurfaceDeCasteljau();}
+
+    inline void notifyPatchChanged(){m_patchChanged=true; m_surfaceChanged=true;} //patch changed => surface changed
+    inline void notifySurfaceChanged(){m_surfaceChanged=true;}
+
+    //OpenGL indexes
+
+    inline void setFirstVBO(GLintptr first){m_firstVBO=first;}
+    inline void setFirstEBO(GLintptr first){m_firstEBO=first;}
+    inline void setBaseVertexEBO(GLintptr baseVertex){m_baseVertexEBO=baseVertex;}
+
+
+    inline GLintptr firstVBO() const {return m_firstVBO;}
+    inline GLintptr firstEBO() const {return m_firstEBO;}
+    inline GLintptr baseVertexEBO() const {return m_baseVertexEBO;}
+
+    //Colors
+
+    inline void setControlPointColor(const glm::vec4& color) {m_controlPointColor=color;}
+    inline void setPatchColor(const glm::vec4& color) {m_patchColor=color;}
+    inline void setSurfaceColor(const glm::vec4& color) {m_surfaceColor=color;}
+
+    inline const glm::vec4& controlPointColor() const {return m_controlPointColor;}
+    inline const glm::vec4& patchColor() const {return m_patchColor;}
+    inline const glm::vec4& surfaceColor() const {return m_surfaceColor;}
+
+    //Id/name
+    inline unsigned int id() const {return m_id;}
+    inline const std::string& name() const {return m_name;}
+    inline void setName(const std::string& name) {m_name=name;}
 
     /**
-     * @brief compute intersection between a control point and a ray
+     * @brief computes the size of the VBO generated for the GPU, in bytes.
+     */
+    inline virtual GLsizeiptr getSizeVBOPosition() const {return 3 * m_points.size() * sizeof(GLfloat);}
+    inline virtual GLsizeiptr getSizeVBOSurface() const {return 3 * m_surface.size() * sizeof(GLfloat);}
+
+    /**
+     * @brief computes the size of the EBO generated for the GPU, in bytes.
+     */
+    inline virtual GLsizeiptr getSizeEBOPosition() const {return m_EBOPoints.size() * sizeof(unsigned int);}
+    inline virtual GLsizeiptr getSizeEBOSurface() const {return m_EBOSurface.size() * sizeof(unsigned int);}
+
+    /**
+     * @brief computes the number of points generated for the GPU, as an unsigned int.
+     */
+    inline virtual size_t getNumberOfPointsPatch() const {return m_points.size();}
+    inline virtual size_t getNumberOfPointsSurface() const {return m_surface.size();}
+
+    //operations
+
+    BezierPatch& operator=(const BezierPatch& other);
+
+    /**
+     * @brief setResolution sets the surface's resolution. How it is handled varies between patches.
+     */
+    virtual void setResolution(size_t resolution);
+    virtual inline size_t resolution() const {return m_resolution;}
+    virtual void clear();
+
+    void draw(GLint uColorLocation);
+
+    /**
+     * @brief rayIntersectsCP computes intersection between a control point and a ray
      * @param origin origin of the ray
      * @param direction direction of the ray
      * @param r maximum distance of the control point sphere hitbox
      * @param iIndex index in i
      * @param jIndex index in j
      * @param distance distance between origin and point found
-     * @return true if intersection was computed, otherwise false.
+     * @return a pointer to the control point intersected if one was found, otherwise a null pointer
      */
-    glm::vec3* rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float &distance) const;
+    glm::vec3* rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float &r, float &distance) const;
+
+    /**
+     * @brief makePatch computes the lines of the patch.
+     * Override this at the same time as drawLines and fill m_points and m_EBOPoints.
+     */
+    virtual void makePatch()=0;
+
+    /**
+     * @brief makeSurfaceDeCasteljau computes the surface polygons (w/ the CPU) using DeCasteljau's algorithm.
+     * Override this at the same time as drawBezier and fill m_bezier and m_EBOBezier.
+     */
+    virtual void makeSurfaceDeCasteljau()=0;
+
+    void updateVBOPatch(GLint vboId, GLint eboId);
+    void updateVBOSurface(GLint vboId, GLint eboId);
 
 protected:
 
+    void setDrawingColor(const glm::vec4& color, GLint uColorLocation);
+
+    /**
+     * @brief drawPatch draws the lines of the patch. This function must be overriden.
+     * Override this at the same time as makeVBOLines and use m_points and m_EBOPoints.
+     * @param first index of where the GPU should start reading indexes in the VBO
+     * @param baseVertex value added to every indexes, in case we draw several objects
+     */
+    virtual void drawPatch() const=0;
+
+    /**
+     * @brief drawSurface draws the bezier surface described by the patch.
+     * If this function is not overriden, the surface will be drawn as simple points.
+     * Override this at the same time as makeVBOBezierDeCasteljau and use m_bezier and m_EBOBezier.
+     * @param first index of where the GPU should start reading indexes in the VBO
+     * @param baseVertex value added to every indexes, in case we draw several objects
+     */
+    virtual void drawSurface() const;
+
+    /**
+     * @brief drawControlPoints draws the control points. You probably don't need to override this.
+     * If this function is not overriden, every control point will be drawn.
+     * @param first index of where the GPU should start reading indexes in the VBO
+     * @param baseVertex value added to every indexes, in case we draw several objects
+     */
+    virtual void drawControlPoints() const;
+
+    //iterators
     typedef std::vector<glm::vec3>::iterator iterator;
     typedef std::vector<glm::vec3>::const_iterator const_iterator;
 
     /**
-     * @brief describes the operations for iterating over m_points. This shouldn't be used outside of the class and its derivations.
+     * @brief describes the operations for iterating over m_points.
      */
-    inline iterator begin();
-    inline const_iterator begin() const;
+    inline iterator begin() {return m_points.begin();}
+    inline const_iterator begin() const {return m_points.begin();}
 
-    inline iterator end();
-    inline const_iterator end() const;
+    inline iterator end() {return m_points.end();}
+    inline const_iterator end() const {return m_points.end();}
 
-    /**
-     * @brief computes the best patch lines VBO from the patch using an EBO as well.
-     */
-    virtual void makeVBOLines()=0;
+    unsigned int                m_id;
+    std::string                 m_name;
 
-    /**
-     * @brief computes the best patch surface or curve VBO from the patch using an EBO as well.
-     * @param rate number of points generated to render polygons
-     */
-    virtual void makeVBOBezierDeCasteljau()=0;
+    std::vector<glm::vec3>      m_points;
+    std::vector<unsigned int>   m_EBOPoints;
 
-    GLsizeiptr getSizeVBOPoints_GPU() const;
-    GLsizeiptr getSizeVBOBezier_GPU() const;
+    std::vector<glm::vec3>      m_surface;
+    std::vector<unsigned int>   m_EBOSurface;
 
-    GLsizeiptr getSizeEBOPoints_GPU() const;
-    GLsizeiptr getSizeEBOBezier_GPU() const;
+    size_t                      m_resolution;
+    bool                        m_patchChanged;
+    bool                        m_surfaceChanged;
 
-    std::vector<glm::vec3> m_points;
-    std::vector<unsigned int> m_EBOPoints;
+    bool                        m_drawPatch;
+    bool                        m_drawSurface;
 
-    std::vector<glm::vec3> m_bezier;
-    std::vector<unsigned int> m_EBOBezier;
+    GLintptr                    m_firstVBO;            //first index of the VBO datas (shared through multiple patches)
+    GLintptr                    m_firstEBO;            //first index of the EBO datas (shared through multiple patches)
+    GLintptr                    m_baseVertexEBO;       //number that should be added to every index in the EBO
+                                    //(maximum index of the previously filled EBO, which is also the total number of points prior to this object)
 
-    size_t m_resolution;
-    bool m_resolutionChanged;
+    glm::vec4                   m_controlPointColor;
+    glm::vec4                   m_patchColor;
+    glm::vec4                   m_surfaceColor;
+
+    //static
+
+    static unsigned int         ms_currentId;
 };
 
 /*
 
 Le patch est construit selon les indices suivants :
 
-0,0 --------> N-1, j
+0,0 --------> j = N-1
   |
   |
   |
   v
-M-1, i
+i = M-1
 
 VBOData permet au GPU de construire rapidement le patch, colonnes par colonnes puis lignes par lignes.
 

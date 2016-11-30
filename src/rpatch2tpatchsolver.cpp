@@ -4,13 +4,15 @@ RPatch2TPatchSolver::RPatch2TPatchSolver()
 {
 }
 
-RPatch2TPatchSolver::RPatch2TPatchSolver(size_t nOrder, size_t mOrder) : m_bezierTriangleSize(nOrder+mOrder+1), m_tCoefMatrix(m_bezierTriangleSize*m_bezierTriangleSize)
+RPatch2TPatchSolver::RPatch2TPatchSolver(size_t nOrder, size_t mOrder) :
+    m_bezierTriangleSize(nOrder+mOrder+1),
+    m_tCoefMatrix(m_bezierTriangleSize*m_bezierTriangleSize)
 {
 }
 
 BezierPatch_Triangle RPatch2TPatchSolver::solveFrom(const BezierPatch_Rectangle& rectanglePatch, trianglePart_t triangle)
 {
-    BezierPatch_Triangle trianglePatch(m_bezierTriangleSize > 0 ? rectanglePatch.getSizeM()+rectanglePatch.getSizeN()-1 : 0);
+    BezierPatch_Triangle trianglePatch(m_bezierTriangleSize > 0 ? rectanglePatch.sizeM()+rectanglePatch.sizeN()-1 : 0);
 
     //declaring our resources to solve the equation
     ControlPoint_t cp;
@@ -32,15 +34,18 @@ BezierPatch_Triangle RPatch2TPatchSolver::solveFrom(const BezierPatch_Rectangle&
     }
 
     //n1 and n2 are orders, and order is size-1 in both M and N for our rectangle patch
-    size_t n1=rectanglePatch.getSizeM()-1;
-    size_t n2=rectanglePatch.getSizeN()-1;
+    size_t n1=rectanglePatch.sizeM()-1;
+    size_t n2=rectanglePatch.sizeN()-1;
 
     //here develop the right side equation, and complete the left side with points and coefficients
-    for(size_t j1=0; j1<rectanglePatch.getSizeM(); ++j1)
+    for(size_t j1=0; j1<rectanglePatch.sizeM(); ++j1)
     {
-        for(size_t j2=0; j2<rectanglePatch.getSizeN(); ++j2)
+        for(size_t j2=0; j2<rectanglePatch.sizeN(); ++j2)
         {
-            cp=rectanglePatch.getPoint(j1, j2);
+            if(triangle==Solver_UpperTriangle)
+                cp=rectanglePatch.getPoint(j1, j2);
+            else
+                cp=rectanglePatch.getPoint(n1-j1, n2-j2);
 
             //coefficient calculation : binomial coefficient of n1, j1, multiplied by the one of n2, j2
 
@@ -54,8 +59,7 @@ BezierPatch_Triangle RPatch2TPatchSolver::solveFrom(const BezierPatch_Rectangle&
             //(b+c)^(j1)*a^(n1-j1)*b^(n2-j2)
             polynomialSum*=ProductPolynom3Var(1, n1-j1, n2-j2, 0);
             //(b+c)^(j1)*a^(n1-j1)*(a+c)^(j2)*b^(n2-j2)
-            Sum_ProductPolynom3Var weirdo=Sum_ProductPolynom3Var::remarkable_identity_plus(ProductPolynom3Var::PP3V_A, ProductPolynom3Var::PP3V_C, j2);
-            polynomialSum*=weirdo;
+            polynomialSum*=Sum_ProductPolynom3Var::remarkable_identity_plus(ProductPolynom3Var::PP3V_A, ProductPolynom3Var::PP3V_C, j2);
 
             //Finally, iterate over the sum to know what triangle point we are setting
             //and deduce a new term of this point with the full coefficient and the rectangle control point

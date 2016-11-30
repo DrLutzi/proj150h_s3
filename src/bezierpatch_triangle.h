@@ -13,7 +13,7 @@ public:
 
     //get
 
-    size_t getSize() const;
+    size_t size() const;
 
     const glm::vec3 &getPoint(size_t i, size_t j, size_t k) const;
 
@@ -21,30 +21,33 @@ public:
 
     void setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp);
 
-    //others
+    void makePatch();
+    void makeSurfaceDeCasteljau();
 
-    void drawLines(GLint first=0, GLint baseVertex=0) const;
-    void drawBezier(GLint first=0, GLint baseVertex=0) const;
+    //operators
+
+    BezierPatch_Triangle& operator=(const BezierPatch_Triangle& other);
 
 protected:
 
+    //others
+
+    void drawPatch() const;
+    void drawSurface() const;
+
     const glm::vec3 &casteljau(float u, float v, float w);
-
-    void makeVBOLines();
-
-    void makeVBOBezierDeCasteljau();
 
     glm::vec3 &getTmpCasteljau(size_t i, size_t j, size_t k);
 
 private:
 
     /**
-     * @brief remplit m_precomputedSums_NMinusK avec \sum_{i=0}^{k-1}(n-k); utilisé pour accéder aux CPs avec un 3-uplet (i,j,k).
+     * @brief calculates \sum_{i=0}^{k}(n-i) for any k>0 and 0 for k=0. n is m_size.
+     * This is used to access the vector m_points.
      */
-    void fillSums_NMinusK();
+    unsigned int accessValue(unsigned int k) const;
 
     size_t m_size;
-    std::vector<unsigned int> m_precomputedSums_NMinusK;
 
     std::vector<glm::vec3> m_tmpCasteljau;
 };

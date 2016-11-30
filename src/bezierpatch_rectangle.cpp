@@ -4,7 +4,7 @@ BezierPatch_Rectangle::BezierPatch_Rectangle() : BezierPatch()
 {
 }
 
-BezierPatch_Rectangle::BezierPatch_Rectangle(size_t m, size_t n) : BezierPatch(m*n, m*n*2), m_sizeM(m), m_sizeN(n), m_tmpCasteljau(m*n)
+BezierPatch_Rectangle::BezierPatch_Rectangle(size_t m, size_t n) : BezierPatch(m*n), m_sizeM(m), m_sizeN(n), m_tmpCasteljau(m*n)
 {}
 
 BezierPatch_Rectangle::~BezierPatch_Rectangle()
@@ -18,12 +18,12 @@ const glm::vec3 &BezierPatch_Rectangle::getPoint(size_t i, size_t j) const
     return m_points[i*m_sizeN+j];
 }
 
-size_t BezierPatch_Rectangle::getSizeM() const
+size_t BezierPatch_Rectangle::sizeM() const
 {
     return m_sizeM;
 }
 
-size_t BezierPatch_Rectangle::getSizeN() const
+size_t BezierPatch_Rectangle::sizeN() const
 {
     return m_sizeN;
 }
@@ -33,34 +33,13 @@ size_t BezierPatch_Rectangle::getSizeN() const
 void BezierPatch_Rectangle::setPoint(size_t i, size_t j, const glm::vec3 &cp)
 {
     m_points[i*m_sizeN+j]=cp;
+    notifyPatchChanged();
 }
 
-//others
 
-void BezierPatch_Rectangle::drawLines(GLint first, GLint baseVertex) const
+void BezierPatch_Rectangle::makePatch()
 {
-    for(size_t i=0; i<getNumberOfPoints(); i+=getSizeN())
-        glDrawElementsBaseVertex(GL_LINE_STRIP, getSizeN(), GL_UNSIGNED_INT,
-                                 (GLvoid*)((first + i)*sizeof(unsigned int)), baseVertex);
-
-    for(size_t j=0; j<getNumberOfPoints(); j+=getSizeM())
-        glDrawElementsBaseVertex(GL_LINE_STRIP, getSizeM(), GL_UNSIGNED_INT,
-                                 (GLvoid*)((first + getNumberOfPoints()+j)*sizeof(unsigned int)), baseVertex); //<=> m*n+j
-}
-
-void BezierPatch_Rectangle::drawBezier(GLint first, GLint baseVertex) const
-{
-    size_t cappedResolution=std::max(size_t(2), m_resolution);
-
-    for(size_t i=0; i<cappedResolution; ++i)
-        glDrawElementsBaseVertex(GL_TRIANGLE_STRIP, 2*cappedResolution, GL_UNSIGNED_INT,
-                                 (GLvoid*)(getSizeEBOPoints_GPU()+(first + i*2*cappedResolution)*sizeof(unsigned int)), m_points.size()+baseVertex);
-}
-
-//////////////////////PRIVATE////////////////////////////
-
-void BezierPatch_Rectangle::makeVBOLines()
-{
+    m_EBOPoints.resize(sizeM()*sizeN()*2);
     if(m_points.size()>1)
     {
         int k=0;
@@ -81,6 +60,74 @@ void BezierPatch_Rectangle::makeVBOLines()
         }
     }
 }
+
+void BezierPatch_Rectangle::makeSurfaceDeCasteljau()
+{
+    m_surface.resize(0);
+    m_EBOSurface.resize(0);
+    size_t cappedResolution=std::max(size_t(2), m_resolution);
+    m_surface.reserve(cappedResolution*cappedResolution);
+    m_EBOSurface.reserve(cappedResolution*cappedResolution*2);
+
+    //We will draw this VBO using GL_TRIANGLE_STRIP, so we need to store alternative sides indexes for each iteration into the EBO to draw triangles
+
+    for(size_t i=0; i<cappedResolution; ++i)
+        for(size_t j=0; j<cappedResolution; ++j)
+        {
+            m_surface.push_back(casteljau((float)(i)/(cappedResolution-1), (float)j/(cappedResolution-1)));
+            if(i+1<cappedResolution)
+            {
+                m_EBOSurface.push_back(i*cappedResolution+j);
+                m_EBOSurface.push_back((i+1)*cappedResolution+j);
+            }
+        }
+}
+
+BezierPatch_Rectangle& BezierPatch_Rectangle::operator=(const BezierPatch_Rectangle &other)
+{
+    if(&other!=this)
+    {
+        m_sizeM=other.sizeM();
+        m_sizeN=other.sizeN();
+        BezierPatch::operator=(other);
+        m_tmpCasteljau.resize(sizeM()*sizeN());
+    }
+    return (*this);
+}
+
+//////////////////////PROTECTED////////////////////////////
+
+//others
+
+void BezierPatch_Rectangle::drawPatch() const
+{
+    if(!m_drawPatch)
+        return;
+
+    //first draw all the horizontal lines
+    for(size_t i=0; i<getNumberOfPointsPatch(); i+=sizeN())
+        glDrawElementsBaseVertex(GL_LINE_STRIP, sizeN(), GL_UNSIGNED_INT,
+                                 (GLvoid*)(m_firstEBO + i*sizeof(unsigned int)), m_baseVertexEBO);
+
+    //do the same with the vertical lines
+    for(size_t j=0; j<getNumberOfPointsPatch(); j+=sizeM())
+        glDrawElementsBaseVertex(GL_LINE_STRIP, sizeM(), GL_UNSIGNED_INT,
+                                 (GLvoid*)(m_firstEBO + (getNumberOfPointsPatch()+j)*sizeof(unsigned int)), m_baseVertexEBO); //<=> m*n+j
+}
+
+void BezierPatch_Rectangle::drawSurface() const
+{
+    if(!m_drawSurface)
+        return;
+
+    size_t cappedResolution=std::max(size_t(2), m_resolution);
+
+    for(size_t i=0; i<cappedResolution-1; ++i)
+        glDrawElementsBaseVertex(GL_TRIANGLE_STRIP, 2*cappedResolution, GL_UNSIGNED_INT,
+                                 (GLvoid*)(m_firstEBO + getSizeEBOPosition() + (i*2*cappedResolution)*sizeof(unsigned int)), m_points.size()+m_baseVertexEBO);
+}
+
+//////////////////////PRIVATE////////////////////////////
 
 const glm::vec3& BezierPatch_Rectangle::casteljau(float u, float v)
 {
@@ -119,41 +166,7 @@ const glm::vec3& BezierPatch_Rectangle::casteljau(float u, float v)
     return getTmpCasteljau(0, 0);
 }
 
-void BezierPatch_Rectangle::makeVBOBezierDeCasteljau()
-{
-    m_bezier.resize(0);
-    m_EBOBezier.resize(0);
-    size_t cappedResolution=std::max(size_t(2), m_resolution);
-    m_bezier.reserve(cappedResolution*cappedResolution);
-    m_EBOBezier.reserve(cappedResolution*cappedResolution*2);
-
-    //We will draw this VBO using GL_TRIANGLE_STRIP, so we need to store alternative sides indexes for each iteration into the EBO to draw triangles
-
-    for(size_t i=0; i<cappedResolution; ++i)
-        for(size_t j=0; j<cappedResolution; ++j)
-        {
-            m_bezier.push_back(casteljau((float)(i)/(cappedResolution-1), (float)j/(cappedResolution-1)));
-            if(i+1<cappedResolution)
-            {
-                m_EBOBezier.push_back(i*cappedResolution+j);
-                m_EBOBezier.push_back((i+1)*cappedResolution+j);
-            }
-        }
-}
-
 glm::vec3 &BezierPatch_Rectangle::getTmpCasteljau(size_t i, size_t j)
 {
     return m_tmpCasteljau[i*m_sizeN+j];
 }
-
-/////////////////////////////////////////////////////////
-
-
-BezierPatch_Square::BezierPatch_Square() : BezierPatch_Rectangle()
-{}
-
-BezierPatch_Square::BezierPatch_Square(size_t size) : BezierPatch_Rectangle(size, size)
-{}
-
-BezierPatch_Square::~BezierPatch_Square()
-{}
