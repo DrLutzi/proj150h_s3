@@ -53,7 +53,8 @@ SOURCES += main.cpp \
     bezierpatch_triangle.cpp \
     rpatch2tpatchsolver.cpp \
     productpolynom3var.cpp \
-    bezierpatch_manager.cpp
+    bezierpatch_manager.cpp \
+    bezierpatch_tetrahedron.cpp
 
 HEADERS  += viewer.h \
         ShaderProgram.h \
@@ -64,7 +65,8 @@ HEADERS  += viewer.h \
     bezierpatch_triangle.h \
     rpatch2tpatchsolver.h \
     productpolynom3var.h \
-    bezierpatch_manager.h
+    bezierpatch_manager.h \
+    bezierpatch_tetrahedron.h
 
 OTHER_FILES += \
     simpleShader.vert \

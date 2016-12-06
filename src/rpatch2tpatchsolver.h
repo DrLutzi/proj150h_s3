@@ -13,7 +13,7 @@ public:
     typedef enum {Solver_UpperTriangle=0, Solver_LowerTriangle=1} trianglePart_t;
 
     RPatch2TPatchSolver();
-    RPatch2TPatchSolver(size_t nOrder, size_t mOrder);
+    ~RPatch2TPatchSolver();
 
     BezierPatch_Triangle solveFrom(const BezierPatch_Rectangle& rectanglePatch, trianglePart_t triangle);
 
@@ -28,8 +28,8 @@ public:
      * @param coef
      * @precondition i1, i2 and i3 are valid values in any context according to the equation. This function doesn't perform boundaries checking.
      */
-    void setCoef(trianglePart_t trianglePart, unsigned int i1, unsigned int i2, unsigned int i3, double coef);
-    double coef(trianglePart_t trianglePart, unsigned int i1, unsigned int i2, unsigned int i3);
+    void setCoef(unsigned int i1, unsigned int i2, unsigned int i3, double coef);
+    double coef(unsigned int i1, unsigned int i2, unsigned int i3);
 
 private:
 

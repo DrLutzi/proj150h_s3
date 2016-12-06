@@ -1,18 +1,24 @@
 #include "rpatch2tpatchsolver.h"
 
-RPatch2TPatchSolver::RPatch2TPatchSolver()
+RPatch2TPatchSolver::RPatch2TPatchSolver() :
+    m_bezierTriangleSize(0),
+    m_tCoefMatrix()
 {
 }
 
-RPatch2TPatchSolver::RPatch2TPatchSolver(size_t nOrder, size_t mOrder) :
-    m_bezierTriangleSize(nOrder+mOrder+1),
-    m_tCoefMatrix(m_bezierTriangleSize*m_bezierTriangleSize)
+RPatch2TPatchSolver::~RPatch2TPatchSolver()
 {
+
 }
 
 BezierPatch_Triangle RPatch2TPatchSolver::solveFrom(const BezierPatch_Rectangle& rectanglePatch, trianglePart_t triangle)
 {
-    BezierPatch_Triangle trianglePatch(m_bezierTriangleSize > 0 ? rectanglePatch.sizeM()+rectanglePatch.sizeN()-1 : 0);
+    if(rectanglePatch.sizeM() == 0 || rectanglePatch.sizeN() == 0)
+        return BezierPatch_Triangle();
+
+    m_bezierTriangleSize=rectanglePatch.sizeM()+rectanglePatch.sizeN()-1;
+    m_tCoefMatrix.resize(m_bezierTriangleSize*m_bezierTriangleSize);
+    BezierPatch_Triangle trianglePatch(m_bezierTriangleSize);
 
     //declaring our resources to solve the equation
     ControlPoint_t cp;
@@ -29,7 +35,7 @@ BezierPatch_Triangle RPatch2TPatchSolver::solveFrom(const BezierPatch_Rectangle&
             //note that order n1+n2 is triangleSize-1, because we chose to code based on the number of CPs rather than orders
             double leftCoef=boost::math::factorial<double>(m_bezierTriangleSize-1)/(boost::math::factorial<double>(i1)*boost::math::factorial<double>(i2)*boost::math::factorial<double>(i3));
 
-            setCoef(triangle, i1, i2, i3, leftCoef);
+            setCoef(i1, i2, i3, leftCoef);
         }
     }
 
@@ -68,7 +74,7 @@ BezierPatch_Triangle RPatch2TPatchSolver::solveFrom(const BezierPatch_Rectangle&
                 size_t i1=(*it)[ProductPolynom3Var::PP3V_A];
                 size_t i2=(*it)[ProductPolynom3Var::PP3V_B];
                 size_t i3=(*it)[ProductPolynom3Var::PP3V_C];
-                ((*it)*=rightCoef)/=coef(triangle, i1, i2, i3);
+                ((*it)*=rightCoef)/=coef(i1, i2, i3);
                 trianglePatch.setPoint(i1, i2, i3, trianglePatch.getPoint(i1, i2, i3)+cp*(float)(*it).coef());
             }
         }
@@ -78,12 +84,12 @@ BezierPatch_Triangle RPatch2TPatchSolver::solveFrom(const BezierPatch_Rectangle&
     return trianglePatch;
 }
 
-void RPatch2TPatchSolver::setCoef(trianglePart_t trianglePart, unsigned int i1, unsigned int i2, unsigned int i3, double coef)
+void RPatch2TPatchSolver::setCoef(unsigned int i1, unsigned int i2, unsigned int i3, double coef)
 {
-    m_tCoefMatrix[trianglePart==Solver_UpperTriangle ? i1*m_bezierTriangleSize+i3 : (m_bezierTriangleSize*m_bezierTriangleSize)-(i3*m_bezierTriangleSize+i1)] = coef;
+    m_tCoefMatrix[i1*m_bezierTriangleSize+i3] = coef;
 }
 
-double RPatch2TPatchSolver::coef(trianglePart_t trianglePart, unsigned int i1, unsigned int i2, unsigned int i3)
+double RPatch2TPatchSolver::coef(unsigned int i1, unsigned int i2, unsigned int i3)
 {
-    return m_tCoefMatrix[trianglePart==Solver_UpperTriangle ? i1*m_bezierTriangleSize+i3 : (m_bezierTriangleSize*m_bezierTriangleSize)-(i3*m_bezierTriangleSize+i1)];
+    return m_tCoefMatrix[i1*m_bezierTriangleSize+i3];
 }

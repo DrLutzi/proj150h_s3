@@ -9,7 +9,7 @@ public:
     BezierPatch_Triangle();
 
     BezierPatch_Triangle(size_t n);
-    virtual ~BezierPatch_Triangle();
+    ~BezierPatch_Triangle();
 
     //get
 

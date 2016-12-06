@@ -2,7 +2,8 @@
 
 
 
-BezierPatch_Manager::BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation) :
+BezierPatch_Manager::BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation, QObject *parent) :
+    QObject(parent),
     m_VAOId(vaoId),
     m_VBOPositionId(vboPositionId),
     m_EBOId(eboId),
@@ -13,8 +14,19 @@ BezierPatch_Manager::BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint
     m_VBOCapacity(0),
     m_EBOCapacity(0),
     m_selectedCP(NULL),
-    m_selectedPatch(NULL)
+    m_selectedPatch(NULL),
+    m_refreshTimer(),
+    m_refreshRate(60),
+    m_waitingUpdate(false)
 {
+    m_refreshTimer.setInterval((int)(float(1000)/m_refreshRate));
+    connect(&m_refreshTimer, SIGNAL(timeout()), this, SLOT(update()));
+}
+
+void BezierPatch_Manager::setRefreshRate(unsigned int refreshRate)
+{
+    refreshRate = refreshRate>0 ? refreshRate : 1;
+    m_refreshTimer.setInterval((int)(float(1000)/m_refreshRate));
 }
 
 void BezierPatch_Manager::append(BezierPatch* patch, bool reallocate)
@@ -104,15 +116,22 @@ void BezierPatch_Manager::remakeScene()
 
 void BezierPatch_Manager::updateScene()
 {
-    //transfer informations to the VBO and the EBO.
-    for(iterator it=begin(); it!=end(); ++it)
+    if(m_refreshTimer.isActive())
+        m_waitingUpdate=true;
+    else
     {
-        BezierPatch* patch=(*it);
-
-        if(patch!=NULL)
+        m_waitingUpdate=false;
+        m_refreshTimer.start();
+        //transfer informations to the VBO and the EBO.
+        for(iterator it=begin(); it!=end(); ++it)
         {
-            patch->updateVBOPatch(m_VBOPositionId, m_EBOId);
-            patch->updateVBOSurface(m_VBOPositionId, m_EBOId);
+            BezierPatch* patch=(*it);
+
+            if(patch!=NULL)
+            {
+                patch->updateVBOPatch(m_VBOPositionId, m_EBOId);
+                patch->updateVBOSurface(m_VBOPositionId, m_EBOId);
+            }
         }
     }
 }
@@ -157,6 +176,15 @@ void BezierPatch_Manager::updateSelectedCP(const glm::vec3& newPosition)
             m_selectedPatch->notifyPatchChanged();
         }
     }
+}
+
+//////////////////////PRIV.SLOT////////////////////////////
+
+void BezierPatch_Manager::update()
+{
+    m_refreshTimer.stop();
+    if(m_waitingUpdate)
+        updateScene();
 }
 
 //////////////////////PRIVATE////////////////////////////

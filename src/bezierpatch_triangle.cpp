@@ -1,10 +1,15 @@
 #include "bezierpatch_triangle.h"
 
-BezierPatch_Triangle::BezierPatch_Triangle() : BezierPatch(), m_size(0)
+BezierPatch_Triangle::BezierPatch_Triangle() :
+    BezierPatch(),
+    m_size(0)
 {
 }
 
-BezierPatch_Triangle::BezierPatch_Triangle(size_t n) : BezierPatch(((n)*(n+1))/2), m_size(n), m_tmpCasteljau(m_points.size())
+BezierPatch_Triangle::BezierPatch_Triangle(size_t n) :
+    BezierPatch(((n)*(n+1))/2),
+    m_size(n),
+    m_tmpCasteljau(m_points.size())
 {
 }
 
@@ -63,7 +68,7 @@ void BezierPatch_Triangle::makeSurfaceDeCasteljau()
     m_surface.reserve(cappedResolution*cappedResolution);
 
     m_EBOSurface.resize(0);
-    m_EBOSurface.reserve(cappedResolution*cappedResolution*3);
+    m_EBOSurface.reserve(cappedResolution*cappedResolution*2);
 
     //calculate entire VBO, from top to bottom, left to right (because why not?)
     int eboIndex=0;
@@ -87,6 +92,7 @@ void BezierPatch_Triangle::makeSurfaceDeCasteljau()
                 ++eboIndex;
         }
     }
+
 }
 
 //operators

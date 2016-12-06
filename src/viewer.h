@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #include <QGLViewer/qglviewer.h>
 #include <glm/glm.hpp>
+#include <cstdlib>
 #include <ShaderProgramBezier.h>
 #include "bezierpatch_manager.h"
 
@@ -21,6 +22,9 @@ protected:
 
     /// transforms rectangular patch into one upper triangular patch
     void rectangularPatch2UpperTrianglePatch();
+
+    /// generates a bezier thetraedron of size n
+    void generateBezierThetraedron(size_t n, float xStep=5.0f, float yStep=5.0f, float zStep=-5.0f, float max_noise=0.5f);
 
 	/// draw callback de la QGLViewer
     void draw();
@@ -58,8 +62,12 @@ protected:
     GLuint m_ebo_id;
     /// patch de bezier dans sa version rectangulaire
     BezierPatch_Rectangle *m_rectangularPatch;
+    /// patch de bezier dans sa version rectangulaire
+    BezierPatch_Rectangle *m_examplePatch;
     /// patch de bezier dans sa version triangulaire
     BezierPatch_Triangle *m_triangularPatch;
+    /// bezier tetrahedron
+    BezierPatch_Tetrahedron *m_tetrahedronPatch;
     /// patch uniforme
     BezierPatch_Manager *m_manager;
     /// shader prg
@@ -75,6 +83,8 @@ private:
     float m_distanceSelection;
     /// compute bezier surface for next frame
     bool m_drawSurfaces;
+
+    GLenum m_surfacePolygonMode;
 };
 
 #endif

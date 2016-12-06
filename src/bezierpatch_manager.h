@@ -3,12 +3,16 @@
 
 #include "bezierpatch_rectangle.h"
 #include "bezierpatch_triangle.h"
+#include "bezierpatch_tetrahedron.h"
 #include "rpatch2tpatchsolver.h"
+#include <QTimer>
 
-class BezierPatch_Manager
+class BezierPatch_Manager : public QObject
 {
+    Q_OBJECT
+
 public:
-    BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation);
+    BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation, QObject *parent=NULL);
 
     //iterator
 
@@ -20,6 +24,8 @@ public:
 
     iterator end(){return m_patchs.end();}
     const_iterator end() const{return m_patchs.end();}
+
+    void setRefreshRate(unsigned int refreshRate);
 
 
     /**
@@ -68,7 +74,10 @@ public:
     //BezierPatch *&operator[](size_t i){return m_patchs[i];} //doesn't work??
     void set(size_t index, BezierPatch* patch){m_patchs[index]=patch;}
 
-    //
+private slots:
+
+    /// slot fired when timer out
+    void update();
 
 private:
 
@@ -99,6 +108,15 @@ private:
     glm::vec3 *m_selectedCP;
     ///Pointer to the patch that has a selectedCP
     BezierPatch *m_selectedPatch;
+
+    ///A timer to limit the number of times a scene can be updated
+    QTimer m_refreshTimer;
+
+    ///refresh rate of the manager
+    unsigned int m_refreshRate;
+
+    ///indicates if an update function has been recently called or not
+    bool m_waitingUpdate;
 };
 
 #endif // BEZIERPATCH_MANAGER_H

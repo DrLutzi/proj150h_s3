@@ -4,7 +4,11 @@ BezierPatch_Rectangle::BezierPatch_Rectangle() : BezierPatch()
 {
 }
 
-BezierPatch_Rectangle::BezierPatch_Rectangle(size_t m, size_t n) : BezierPatch(m*n), m_sizeM(m), m_sizeN(n), m_tmpCasteljau(m*n)
+BezierPatch_Rectangle::BezierPatch_Rectangle(size_t m, size_t n) :
+    BezierPatch(m*n),
+    m_sizeM(m),
+    m_sizeN(n),
+    m_tmpCasteljau(m_points.size())
 {}
 
 BezierPatch_Rectangle::~BezierPatch_Rectangle()

@@ -8,7 +8,7 @@ class BezierPatch_Rectangle : public BezierPatch
 public:
     BezierPatch_Rectangle();
     BezierPatch_Rectangle(size_t m, size_t n);
-    virtual ~BezierPatch_Rectangle();
+    ~BezierPatch_Rectangle();
 
     //get
 

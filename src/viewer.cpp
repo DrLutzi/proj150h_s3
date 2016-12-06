@@ -8,6 +8,8 @@ void Viewer::tp_init()
     m_deltaPos=QPoint(0,0);
     m_selectedCP=false;
     m_drawSurfaces=false;
+    m_surfacePolygonMode=GL_LINE;
+    srand(time(NULL));
 
     setMouseTracking(true);
     // genere les donnees a afficher
@@ -19,7 +21,6 @@ void Viewer::tp_init()
     m_rectangularPatch->setPoint(0,1, glm::vec3(-1,1,-0.1));
     m_rectangularPatch->setPoint(0,2, glm::vec3(-1,1.8,0.2));
 
-
     m_rectangularPatch->setPoint(1,0, glm::vec3(1,-1,0.5));
     m_rectangularPatch->setPoint(1,1, glm::vec3(1,1,0));
     m_rectangularPatch->setPoint(1,2, glm::vec3(1,2,-0.2));
@@ -28,7 +29,38 @@ void Viewer::tp_init()
     m_rectangularPatch->setPatchColor(glm::vec4(0.5, 0.7, 0.5, 1.0));
     m_rectangularPatch->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
 
-    m_rectangularPatch->showPatch();
+    m_rectangularPatch->hidePatch();
+
+
+    m_examplePatch = new BezierPatch_Rectangle(4,4);
+    m_examplePatch->setResolution(40);
+
+    m_examplePatch->setPoint(0,0, glm::vec3(-1,0, 1.3));
+    m_examplePatch->setPoint(0,1, glm::vec3(-1.2,1.2, 1));
+    m_examplePatch->setPoint(0,2, glm::vec3(-0.5,1.5, 1.2));
+    m_examplePatch->setPoint(0,3, glm::vec3(-0.1, 2, 1.5));
+
+    m_examplePatch->setPoint(1,0, glm::vec3(-0.8,-0.1, 1));
+    m_examplePatch->setPoint(1,1, glm::vec3(-0.6,1, 1));
+    m_examplePatch->setPoint(1,2, glm::vec3(-0.2,1.4, 1.3));
+    m_examplePatch->setPoint(1,3, glm::vec3(0.3, 2, 1.5));
+
+    m_examplePatch->setPoint(2,0, glm::vec3(0.9,-0.3, 1));
+    m_examplePatch->setPoint(2,1, glm::vec3(1,0.5, 1.2));
+    m_examplePatch->setPoint(2,2, glm::vec3(1.2,1.2, 1.4));
+    m_examplePatch->setPoint(2,3, glm::vec3(1.4, 1.7, 1.6));
+
+    m_examplePatch->setPoint(3,0, glm::vec3(2.1,0.6, 0.9));
+    m_examplePatch->setPoint(3,1, glm::vec3(2.1,1, 1.1));
+    m_examplePatch->setPoint(3,2, glm::vec3(2.2,1.7, 1.3));
+    m_examplePatch->setPoint(3,3, glm::vec3(2.3, 1.9, 1.5));
+
+    m_examplePatch->setSurfaceColor(glm::vec4(0.9, 0.9, 0.3, 1.0));
+    m_examplePatch->setPatchColor(glm::vec4(0.8, 0.8, 0.8, 1.0));
+    m_examplePatch->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
+
+    m_examplePatch->hidePatch();
+
 
     //////////////////////////////////
 
@@ -48,7 +80,17 @@ void Viewer::tp_init()
     m_triangularPatch->setPatchColor(glm::vec4(0.7, 0.5, 0.7, 1.0));
     m_triangularPatch->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
 
-    m_triangularPatch->showPatch();
+    m_triangularPatch->hidePatch();
+
+    //////////////////////////////////
+
+    generateBezierThetraedron(7);
+    m_tetrahedronPatch->showPatch();
+    m_tetrahedronPatch->setResolution(40);
+
+    m_tetrahedronPatch->setSurfaceColor(glm::vec4(0.9, 0.2, 0.4, 1.0));
+    m_tetrahedronPatch->setPatchColor(glm::vec4(0.9, 0.5, 0.7, 1.0));
+    m_tetrahedronPatch->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
 
 
     // SHADER
@@ -82,8 +124,11 @@ void Viewer::tp_init()
 
     m_manager = new BezierPatch_Manager(m_Vao, m_vbo_id, m_ebo_id, m_ShaderProgram->idOfColor);
 
+    m_manager->setRefreshRate(60);
     m_manager->append(m_rectangularPatch, false);
-    m_manager->append(m_triangularPatch);
+    m_manager->append(m_triangularPatch, false);
+    m_manager->append(m_examplePatch, false);
+    m_manager->append(m_tetrahedronPatch);
 }
 
 void Viewer::init()
@@ -104,11 +149,11 @@ void Viewer::init()
     tp_init();
 
 	// LIB QGLViewer scene initialization
-	setSceneRadius(3.0);
+    setSceneRadius(20.0);
     setSceneCenter(qglviewer::Vec(0.0,0.0,0.0));
     camera()->showEntireScene();
 
-    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK,m_surfacePolygonMode);
 }
 
 void Viewer::rectangularPatch2UpperTrianglePatch()
@@ -116,25 +161,57 @@ void Viewer::rectangularPatch2UpperTrianglePatch()
     BezierPatch_Triangle *upperT = new BezierPatch_Triangle;
     BezierPatch_Triangle *lowerT = new BezierPatch_Triangle;
 
-    RPatch2TPatchSolver solver(m_rectangularPatch->sizeM()-1, m_rectangularPatch->sizeN()-1);
+    RPatch2TPatchSolver solver;
 
-    (*upperT)=solver.solveFrom((*m_rectangularPatch), RPatch2TPatchSolver::Solver_LowerTriangle);
-    (*lowerT)=solver.solveFrom((*m_rectangularPatch), RPatch2TPatchSolver::Solver_UpperTriangle);
+    (*upperT)=solver.solveFrom((*m_examplePatch), RPatch2TPatchSolver::Solver_LowerTriangle);
+    (*lowerT)=solver.solveFrom((*m_examplePatch), RPatch2TPatchSolver::Solver_UpperTriangle);
 
-    upperT->setResolution(10);
+    upperT->setResolution(40);
     upperT->showPatch();
-    upperT->setPatchColor(glm::vec4(0.5, 0.5, 0.7, 1.0));
+    upperT->setPatchColor(glm::vec4(0.7, 0.5, 0.5, 1.0));
     upperT->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
-    upperT->setSurfaceColor(glm::vec4(0.2, 0.2, 0.7, 1.0));
+    upperT->setSurfaceColor(glm::vec4(0.7, 0.2, 0.2, 1.0));
 
-    lowerT->setResolution(10);
+    lowerT->setResolution(40);
     lowerT->showPatch();
-    lowerT->setPatchColor(glm::vec4(0.5, 0.5, 0.7, 1.0));
+    lowerT->setPatchColor(glm::vec4(0.5, 0.7, 0.5, 1.0));
     lowerT->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
-    lowerT->setSurfaceColor(glm::vec4(0.2, 0.2, 0.7, 1.0));
+    lowerT->setSurfaceColor(glm::vec4(0.2, 0.7, 0.2, 1.0));
 
     m_manager->append(upperT, false);
     m_manager->append(lowerT, true);
+    return;
+}
+
+void Viewer::generateBezierThetraedron(size_t n, float xStep, float yStep, float zStep, float max_noise)
+{
+    float noise;
+    m_tetrahedronPatch = new BezierPatch_Tetrahedron(n);
+    glm::vec3 currentCP(0,0,0);
+    size_t i,j,k,l;
+    for(k=0; k<n; ++k)
+    {
+        noise=(float((rand()%2000)-1000)/1000)*max_noise;
+        currentCP.z=k*zStep/2+noise;
+        for(l=0; l<n-k; ++l)
+        {
+            noise=(float((rand()%2000)-1000)/1000)*max_noise;
+            currentCP.x=(l+k)*xStep/2+noise;
+            for(j=0; j<n-k-l; ++j)
+            {
+                i=n-k-l-1;
+                m_tetrahedronPatch->setPoint(i,j,k,l, currentCP);
+                noise=(float((rand()%2000)-1000)/1000)*max_noise;
+                currentCP.x+=xStep+noise;
+                currentCP.y+=noise;
+                currentCP.z+=noise;
+            }
+            noise=(float((rand()%2000)-1000)/1000)*max_noise;
+            currentCP.z+=zStep+noise;
+        }
+        noise=(float((rand()%2000)-1000)/1000)*max_noise;
+        currentCP.y+=yStep+noise;
+    }
 }
 
 void Viewer::draw()
@@ -175,11 +252,14 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         case Qt::Key_B:
 
             m_drawSurfaces=!m_drawSurfaces;
-            for(BezierPatch_Manager::iterator it=m_manager->begin(); it!=m_manager->end(); ++it)
+            /*for(BezierPatch_Manager::iterator it=m_manager->begin(); it!=m_manager->end(); ++it)
             {
                 BezierPatch *patch=(*it);
                 patch->setDrawSurface(m_drawSurfaces);
             }
+            m_rectangularPatch->hideSurface();
+            m_examplePatch->hideSurface();*/
+            m_tetrahedronPatch->setDrawSurface(m_drawSurfaces);
             m_manager->remakeScene();
             break;
 
@@ -187,6 +267,11 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 
             rectangularPatch2UpperTrianglePatch();
             break;
+
+        case Qt::Key_H:
+
+            m_examplePatch->toggleDrawPatch();
+            m_examplePatch->hideSurface();
 
         default:
             break;

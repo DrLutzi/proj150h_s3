@@ -11,7 +11,7 @@ class BezierPatch
 public:
     BezierPatch();
     BezierPatch(size_t sizePatch);
-    ~BezierPatch();
+    virtual ~BezierPatch();
 
     //inline
     //show and hide patch or surface
