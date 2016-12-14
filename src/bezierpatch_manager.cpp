@@ -1,7 +1,5 @@
 #include "bezierpatch_manager.h"
 
-
-
 BezierPatch_Manager::BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation, QObject *parent) :
     QObject(parent),
     m_VAOId(vaoId),
@@ -33,7 +31,7 @@ void BezierPatch_Manager::append(BezierPatch* patch, bool reallocate)
 {
     if(patch!=NULL)
     {
-        m_patchs.push_back(patch);
+        m_patchs.insert(std::pair<unsigned int, BezierPatch*>(patch->id(), patch));
 
         //the indexes where we finished writting
         GLsizeiptr firstVBO=m_VBOPositionSize;
@@ -61,7 +59,16 @@ void BezierPatch_Manager::append(BezierPatch* patch, bool reallocate)
 
 BezierPatch *BezierPatch_Manager::remove(iterator position)
 {
-    BezierPatch *removedPtr=(*position);
+    BezierPatch *removedPtr=(*position).second;
+    m_patchs.erase(position);
+    remakeScene();
+    return removedPtr;
+}
+
+BezierPatch *BezierPatch_Manager::remove(unsigned int id)
+{
+    iterator position=m_patchs.find(id);
+    BezierPatch *removedPtr=(*position).second;
     m_patchs.erase(position);
     remakeScene();
     return removedPtr;
@@ -81,7 +88,7 @@ void BezierPatch_Manager::remakeScene()
     m_currentBaseVertex =   0;
     for(iterator it=begin(); it!=end(); ++it)
     {
-        BezierPatch* patch=(*it);
+        BezierPatch* patch=(*it).second;
 
         if(patch!=NULL)
         {
@@ -99,13 +106,13 @@ void BezierPatch_Manager::remakeScene()
     }
 
     //re-allocate if the new size of the scene is bigger than the old size
-    if(m_VBOPositionSize>m_VBOCapacity)
+    if(m_VBOPositionSize>m_VBOCapacity || m_VBOCapacity > 2*m_VBOPositionSize)
     {
         allocateVBOPosition();
     }
 
     //do that for the EBO, too
-    if(m_EBOSize>m_EBOCapacity)
+    if(m_EBOSize>m_EBOCapacity || m_EBOCapacity > 2*m_EBOSize)
     {
         allocateEBO();
     }
@@ -125,7 +132,7 @@ void BezierPatch_Manager::updateScene()
         //transfer informations to the VBO and the EBO.
         for(iterator it=begin(); it!=end(); ++it)
         {
-            BezierPatch* patch=(*it);
+            BezierPatch* patch=(*it).second;
 
             if(patch!=NULL)
             {
@@ -140,7 +147,7 @@ void BezierPatch_Manager::drawScene()
 {
     for(iterator it=begin(); it!=end(); ++it)
     {
-        BezierPatch* patch=(*it);
+        BezierPatch* patch=(*it).second;
 
         patch->draw(m_uColorLocation);
     }
@@ -153,7 +160,7 @@ bool BezierPatch_Manager::rayIntersectsCP(const glm::vec3& origin, const glm::ve
     m_selectedCP=NULL;
     for(iterator it=begin(); it!=end(); ++it)
     {
-        BezierPatch* patch=(*it);
+        BezierPatch* patch=(*it).second;
 
         //try to connect with a control point (this function also modifies r)
         glm::vec3 *other=patch->rayIntersectsCP(origin, direction, r, distance);

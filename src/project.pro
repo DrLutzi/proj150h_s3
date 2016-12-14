@@ -4,6 +4,8 @@
 #
 #--------------------------
 
+CONFIG += c++11
+
 QT += core gui opengl xml widgets
 TARGET = tp_ogl_basic
 TEMPLATE = app
@@ -54,7 +56,11 @@ SOURCES += main.cpp \
     rpatch2tpatchsolver.cpp \
     productpolynom3var.cpp \
     bezierpatch_manager.cpp \
-    bezierpatch_tetrahedron.cpp
+    bezierpatch_tetrahedron.cpp \
+    bezierpatch_hexaedron.cpp \
+    mainwindow.cpp \
+    widget_patchitem.cpp \
+    dialog_newpatch.cpp
 
 HEADERS  += viewer.h \
         ShaderProgram.h \
@@ -66,10 +72,19 @@ HEADERS  += viewer.h \
     rpatch2tpatchsolver.h \
     productpolynom3var.h \
     bezierpatch_manager.h \
-    bezierpatch_tetrahedron.h
+    bezierpatch_tetrahedron.h \
+    bezierpatch_hexaedron.h \
+    mainwindow.h \
+    widget_patchitem.h \
+    dialog_newpatch.h
 
 OTHER_FILES += \
     simpleShader.vert \
     shaderBezier.frag \
     shaderBezier.vert \
     shaderBezier.geom
+
+FORMS += \
+    mainwindow.ui \
+    widget_patchitem.ui \
+    dialog_newpatch.ui

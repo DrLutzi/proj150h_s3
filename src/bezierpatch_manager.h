@@ -4,6 +4,7 @@
 #include "bezierpatch_rectangle.h"
 #include "bezierpatch_triangle.h"
 #include "bezierpatch_tetrahedron.h"
+#include "bezierpatch_hexaedron.h"
 #include "rpatch2tpatchsolver.h"
 #include <QTimer>
 
@@ -16,8 +17,8 @@ public:
 
     //iterator
 
-    typedef std::vector<BezierPatch*>::iterator iterator;
-    typedef std::vector<BezierPatch*>::const_iterator const_iterator;
+    typedef std::map<unsigned int, BezierPatch*>::iterator iterator;
+    typedef std::map<unsigned int, BezierPatch*>::const_iterator const_iterator;
 
     iterator begin(){return m_patchs.begin();}
     const_iterator begin() const{return m_patchs.begin();}
@@ -38,9 +39,10 @@ public:
 
     /**
      * @brief removes a patch from the manager and returns it (often for deletion).
-     * @param position iterator's position where a patch should be removed
+     * @param position iterator's position where a patch should be removed, or its id.
      */
     BezierPatch *remove(iterator position);
+    BezierPatch *remove(unsigned int id);
 
     /**
      * @brief allocate the memory necessary to transfer class datas to VBO datas, done by remakeScene().
@@ -88,35 +90,35 @@ private:
     void allocateEBO();
 
     /// A vector of patches to be managed
-    std::vector<BezierPatch*> m_patchs;
+    std::map<unsigned int, BezierPatch*>       m_patchs;
 
     /// OpenGL objects
-    GLint m_VAOId;
-    GLint m_VBOPositionId;
-    GLint m_EBOId;
-    GLint m_uColorLocation;
+    GLint                           m_VAOId;
+    GLint                           m_VBOPositionId;
+    GLint                           m_EBOId;
+    GLint                           m_uColorLocation;
 
     /// VBO/EBO sizes
-    GLsizeiptr m_VBOPositionSize;
-    GLsizeiptr m_EBOSize;
-    GLint m_currentBaseVertex;
+    GLsizeiptr                      m_VBOPositionSize;
+    GLsizeiptr                      m_EBOSize;
+    GLint                           m_currentBaseVertex;
 
-    GLsizeiptr m_VBOCapacity;
-    GLsizeiptr m_EBOCapacity;
+    GLsizeiptr                      m_VBOCapacity;
+    GLsizeiptr                      m_EBOCapacity;
 
     ///Selected CP for
-    glm::vec3 *m_selectedCP;
+    glm::vec3                       *m_selectedCP;
     ///Pointer to the patch that has a selectedCP
-    BezierPatch *m_selectedPatch;
+    BezierPatch                     *m_selectedPatch;
 
     ///A timer to limit the number of times a scene can be updated
-    QTimer m_refreshTimer;
+    QTimer                          m_refreshTimer;
 
     ///refresh rate of the manager
-    unsigned int m_refreshRate;
+    unsigned int                    m_refreshRate;
 
     ///indicates if an update function has been recently called or not
-    bool m_waitingUpdate;
+    bool                            m_waitingUpdate;
 };
 
 #endif // BEZIERPATCH_MANAGER_H

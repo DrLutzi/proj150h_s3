@@ -1,11 +1,14 @@
 #include "bezierpatch_rectangle.h"
 
-BezierPatch_Rectangle::BezierPatch_Rectangle() : BezierPatch()
+BezierPatch_Rectangle::BezierPatch_Rectangle() :
+    BezierPatch(),
+    m_sizeM(0),
+    m_sizeN(0)
 {
 }
 
 BezierPatch_Rectangle::BezierPatch_Rectangle(size_t m, size_t n) :
-    BezierPatch(m*n),
+    BezierPatch(m*n,"Rectangle"),
     m_sizeM(m),
     m_sizeN(n),
     m_tmpCasteljau(m_points.size())
@@ -46,12 +49,12 @@ void BezierPatch_Rectangle::makePatch()
     m_EBOPoints.resize(sizeM()*sizeN()*2);
     if(m_points.size()>1)
     {
-        int k=0;
+        unsigned int eboIndex=0;
         for(size_t i=0; i<m_sizeM; ++i)
         {
             for(size_t j=0; j<m_sizeN; ++j)
             {
-                m_EBOPoints[k++]=i*m_sizeN+j;
+                m_EBOPoints[eboIndex++]=i*m_sizeN+j;
             }
         }
 
@@ -59,7 +62,7 @@ void BezierPatch_Rectangle::makePatch()
         {
             for(size_t i=0; i<m_sizeM; ++i)
             {
-                m_EBOPoints[k++]=i*m_sizeN+j;
+                m_EBOPoints[eboIndex++]=i*m_sizeN+j;
             }
         }
     }
@@ -99,6 +102,32 @@ BezierPatch_Rectangle& BezierPatch_Rectangle::operator=(const BezierPatch_Rectan
     return (*this);
 }
 
+//static
+
+BezierPatch_Rectangle* BezierPatch_Rectangle::generate(size_t m, size_t n, float xStep, float yStep, float max_noise)
+{
+    BezierPatch_Rectangle *bp=new BezierPatch_Rectangle(m, n);
+
+    float noise;
+    glm::vec3 currentCP(0,0,0);
+    size_t i,j;
+    for(j=0; j<n; ++j)
+    {
+        noise=(float((rand()%2000)-1000)/1000)*max_noise;
+        for(i=0; i<m; ++i)
+        {
+            bp->setPoint(i, j, currentCP);
+            noise=(float((rand()%2000)-1000)/1000)*max_noise;
+            currentCP.x+=xStep + noise;
+            noise=(float((rand()%2000)-1000)/1000)*max_noise;
+            currentCP.z=noise;
+        }
+        noise=(float((rand()%2000)-1000)/1000)*max_noise;
+        currentCP.y+=yStep+noise;
+    }
+    return bp;
+}
+
 //////////////////////PROTECTED////////////////////////////
 
 //others
@@ -109,14 +138,14 @@ void BezierPatch_Rectangle::drawPatch() const
         return;
 
     //first draw all the horizontal lines
-    for(size_t i=0; i<getNumberOfPointsPatch(); i+=sizeN())
+    for(size_t i=0; i<sizeN()*sizeM(); i+=sizeN())
         glDrawElementsBaseVertex(GL_LINE_STRIP, sizeN(), GL_UNSIGNED_INT,
                                  (GLvoid*)(m_firstEBO + i*sizeof(unsigned int)), m_baseVertexEBO);
 
     //do the same with the vertical lines
-    for(size_t j=0; j<getNumberOfPointsPatch(); j+=sizeM())
+    for(size_t j=0; j<sizeN()*sizeM(); j+=sizeM())
         glDrawElementsBaseVertex(GL_LINE_STRIP, sizeM(), GL_UNSIGNED_INT,
-                                 (GLvoid*)(m_firstEBO + (getNumberOfPointsPatch()+j)*sizeof(unsigned int)), m_baseVertexEBO); //<=> m*n+j
+                                 (GLvoid*)(m_firstEBO + (sizeN()*sizeM()+j)*sizeof(unsigned int)), m_baseVertexEBO);
 }
 
 void BezierPatch_Rectangle::drawSurface() const
@@ -135,30 +164,25 @@ void BezierPatch_Rectangle::drawSurface() const
 
 const glm::vec3& BezierPatch_Rectangle::casteljau(float u, float v)
 {
-    //first fill tmp tab with all the control points (slower, but easier to read)
-
-    for(size_t i=0; i<m_sizeM; ++i)
-    {
-        for(size_t j=0; j<m_sizeN; ++j)
-        {
-            getTmpCasteljau(i, j)=getPoint(i, j);
-        }
-    }
+    //first fill tmp tab with all the control points
+    for(size_t i=0; i<m_points.size(); ++i)
+        m_tmpCasteljau[i]=m_points[i];
 
     size_t setSize;
-    //approche produit tensoriel en montant en v
-    for(size_t j=0; j<m_sizeN; ++j)
+    //tensor product in u
+    //This will create a curve fixed in u
+    for(setSize=m_sizeM-1; setSize>0; --setSize)
     {
-        for(setSize=m_sizeM-1; setSize>0; --setSize)
+        for(size_t i=0; i<setSize; ++i)
         {
-            for(size_t i=0; i<setSize; ++i)
+            for(size_t j=0; j<m_sizeN; ++j)
             {
                 getTmpCasteljau(i, j)= (1-u)*getTmpCasteljau(i, j) + (u)*getTmpCasteljau(i+1, j);
             }
         }
     }
 
-    //B^m_0 créés, 1 casteljau sur v
+    //B^{m}_{0} créés, 1 casteljau on v left
 
     for(setSize=m_sizeN-1; setSize>0; --setSize)
     {
@@ -167,7 +191,7 @@ const glm::vec3& BezierPatch_Rectangle::casteljau(float u, float v)
             getTmpCasteljau(0, j)= (1-v)*getTmpCasteljau(0, j) + (v)*getTmpCasteljau(0, j+1);
         }
     }
-    return getTmpCasteljau(0, 0);
+    return m_tmpCasteljau[0];
 }
 
 glm::vec3 &BezierPatch_Rectangle::getTmpCasteljau(size_t i, size_t j)

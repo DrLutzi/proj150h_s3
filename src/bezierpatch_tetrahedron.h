@@ -49,9 +49,14 @@ private:
      */
     unsigned int accessValue(unsigned int k, unsigned int l) const;
 
+    inline size_t indexOf(size_t j, size_t k, size_t l) const;
+
     size_t m_size;
 
     std::vector<glm::vec3> m_tmpCasteljau;
+
+    ///This is used as a mean to reduce the number of calculations
+    size_t mc_constValue;
 
 };
 

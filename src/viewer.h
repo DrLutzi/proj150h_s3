@@ -16,6 +16,9 @@
  */
 class Viewer : public QGLViewer
 {
+public:
+    Viewer(QWidget *parent=NULL);
+
 protected:
 	/// OpenGL intialisation appelee par la QGLViewer
     void init();
@@ -25,6 +28,9 @@ protected:
 
     /// generates a bezier thetraedron of size n
     void generateBezierThetraedron(size_t n, float xStep=5.0f, float yStep=5.0f, float zStep=-5.0f, float max_noise=0.5f);
+
+    /// generates a bezier hexaedron of size m*n*p
+    void generateBezierHexaedron(size_t m, size_t n, size_t p, float xStep=5.0f, float yStep=5.0f, float zStep=-5.0f, float max_noise=0.5f);
 
 	/// draw callback de la QGLViewer
     void draw();
@@ -66,8 +72,10 @@ protected:
     BezierPatch_Rectangle *m_examplePatch;
     /// patch de bezier dans sa version triangulaire
     BezierPatch_Triangle *m_triangularPatch;
-    /// bezier tetrahedron
+    /// some randomly generated bezier tetrahedron
     BezierPatch_Tetrahedron *m_tetrahedronPatch;
+    /// some randomly generated bezier hexaedron
+    BezierPatch_Hexaedron *m_hexaedronPatch;
     /// patch uniforme
     BezierPatch_Manager *m_manager;
     /// shader prg

@@ -7,7 +7,7 @@ BezierPatch_Triangle::BezierPatch_Triangle() :
 }
 
 BezierPatch_Triangle::BezierPatch_Triangle(size_t n) :
-    BezierPatch(((n)*(n+1))/2),
+    BezierPatch(((n)*(n+1))/2, "Triangle"),
     m_size(n),
     m_tmpCasteljau(m_points.size())
 {

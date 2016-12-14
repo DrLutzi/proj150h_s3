@@ -6,7 +6,6 @@ unsigned int BezierPatch::ms_currentId = 0;
 
 BezierPatch::BezierPatch() :
     m_id                (ms_currentId++),
-    m_name              ("New patch"),
     m_points            (0),
     m_EBOPoints         (0),
     m_surface           (0),
@@ -21,9 +20,9 @@ BezierPatch::BezierPatch() :
 {
 }
 
-BezierPatch::BezierPatch(size_t sizePatch) :
+BezierPatch::BezierPatch(size_t sizePatch, const QString& name) :
     m_id                (ms_currentId++),
-    m_name              ("New patch"),
+    m_name              (name),
     m_points            (sizePatch),
     m_EBOPoints         (),
     m_surface           (),
@@ -36,10 +35,7 @@ BezierPatch::BezierPatch(size_t sizePatch) :
     m_baseVertexEBO     (0),
     m_patchChanged      (true),
     m_surfaceChanged    (true)
-{
-    //initialisation of every point at 0.
-    clear();
-}
+{}
 
 BezierPatch::~BezierPatch()
 {}

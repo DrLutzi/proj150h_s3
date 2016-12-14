@@ -28,6 +28,10 @@ public:
 
     BezierPatch_Rectangle& operator=(const BezierPatch_Rectangle &other);
 
+    //static random generation
+
+    static BezierPatch_Rectangle* generate(size_t m, size_t n, float xStep=1.0f, float yStep=1.0f, float max_noise=0.5f);
+
 protected:
 
     //others

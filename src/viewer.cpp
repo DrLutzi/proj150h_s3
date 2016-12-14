@@ -2,6 +2,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <QKeyEvent>
 
+Viewer::Viewer(QWidget *parent) :
+    QGLViewer(parent)
+{}
+
 void Viewer::tp_init()
 {
     m_oldMousePos=QPoint(0,0);
@@ -90,7 +94,17 @@ void Viewer::tp_init()
 
     m_tetrahedronPatch->setSurfaceColor(glm::vec4(0.9, 0.2, 0.4, 1.0));
     m_tetrahedronPatch->setPatchColor(glm::vec4(0.9, 0.5, 0.7, 1.0));
-    m_tetrahedronPatch->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
+    m_tetrahedronPatch->setControlPointColor(glm::vec4(0.9, 0.9, 0.8, 1.0));
+
+    //////////////////////////////////
+
+    generateBezierHexaedron(6,5,4);
+    m_hexaedronPatch->showPatch();
+    m_hexaedronPatch->setResolution(40);
+
+    m_hexaedronPatch->setSurfaceColor(glm::vec4(0.3, 0.8, 0.4, 1.0));
+    m_hexaedronPatch->setPatchColor(glm::vec4(0.5, 0.7, 0.6, 1.0));
+    m_hexaedronPatch->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
 
 
     // SHADER
@@ -128,7 +142,7 @@ void Viewer::tp_init()
     m_manager->append(m_rectangularPatch, false);
     m_manager->append(m_triangularPatch, false);
     m_manager->append(m_examplePatch, false);
-    m_manager->append(m_tetrahedronPatch);
+    m_manager->append(m_hexaedronPatch);
 }
 
 void Viewer::init()
@@ -214,6 +228,29 @@ void Viewer::generateBezierThetraedron(size_t n, float xStep, float yStep, float
     }
 }
 
+void Viewer::generateBezierHexaedron(size_t m, size_t n, size_t p, float xStep, float yStep, float zStep, float max_noise)
+{
+    float noise;
+    m_hexaedronPatch = new BezierPatch_Hexaedron(m,n,p);
+    glm::vec3 currentCP(0,0,0);
+    size_t i,j,k;
+    for(k=0;k<p;++k)
+    {
+        for(j=0;j<n;++j)
+        {
+            for(i=0;i<m;++i)
+            {
+                m_hexaedronPatch->setPoint(i,j,k, currentCP);
+                currentCP.x+=xStep;
+            }
+            currentCP.y+=yStep;
+            currentCP.x=0;
+        }
+        currentCP.z+=zStep;
+        currentCP.y=0;
+    }
+}
+
 void Viewer::draw()
 {
     // recupere les matrices depuis l'interface
@@ -252,14 +289,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         case Qt::Key_B:
 
             m_drawSurfaces=!m_drawSurfaces;
-            /*for(BezierPatch_Manager::iterator it=m_manager->begin(); it!=m_manager->end(); ++it)
-            {
-                BezierPatch *patch=(*it);
-                patch->setDrawSurface(m_drawSurfaces);
-            }
-            m_rectangularPatch->hideSurface();
-            m_examplePatch->hideSurface();*/
-            m_tetrahedronPatch->setDrawSurface(m_drawSurfaces);
+            m_hexaedronPatch->setDrawSurface(m_drawSurfaces);
             m_manager->remakeScene();
             break;
 
@@ -284,7 +314,8 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
-    float r=0.1;
+    float r=0.5;
+
     if(!(m_selectedCP=m_manager->rayIntersectsCP(m_origin, m_direction, r, m_distanceSelection)))
         QGLViewer::mousePressEvent(e);
 }

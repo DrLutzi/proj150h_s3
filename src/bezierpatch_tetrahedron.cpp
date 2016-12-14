@@ -2,14 +2,16 @@
 
 BezierPatch_Tetrahedron::BezierPatch_Tetrahedron() :
     BezierPatch(),
-    m_size(0)
+    m_size(0),
+    mc_constValue(0)
 {
 }
 
 BezierPatch_Tetrahedron::BezierPatch_Tetrahedron(size_t n) :
-    BezierPatch((n*(n+1)*(n+2))/6),
+    BezierPatch((n*(n+1)*(n+2))/6, "Tetrahedron"),
     m_size(n),
-    m_tmpCasteljau(m_points.size())
+    m_tmpCasteljau(m_points.size()),
+    mc_constValue(3*m_size*m_size + 6*m_size + 2)
 {
 }
 
@@ -27,7 +29,7 @@ size_t BezierPatch_Tetrahedron::size() const
 const glm::vec3 &BezierPatch_Tetrahedron::getPoint(size_t i, size_t j, size_t k, size_t l) const
 {
     if(i+j+k+l!=m_size-1); //TODO
-    return m_points[accessValue(k, l)+j];
+    return m_points[indexOf(j,k,l)];
 }
 
 //set
@@ -35,7 +37,7 @@ const glm::vec3 &BezierPatch_Tetrahedron::getPoint(size_t i, size_t j, size_t k,
 void BezierPatch_Tetrahedron::setPoint(size_t i, size_t j, size_t k, size_t l, const glm::vec3& cp)
 {
     if(i+j+k+l!=m_size-1); //TODO
-    m_points[accessValue(k, l)+j]=cp;
+    m_points[indexOf(j,k,l)]=cp;
 }
 
 void BezierPatch_Tetrahedron::makePatch()
@@ -60,9 +62,9 @@ void BezierPatch_Tetrahedron::makePatch()
         for(size_t j=0; j<size()-k-1; ++j)
         {
             //the point iterated, his right neighbor, and top neighbor
-            m_EBOPoints[eboIndex++]=accessValue(k,l)+j;
-            m_EBOPoints[eboIndex++]=accessValue(k,l)+j+1;
-            m_EBOPoints[eboIndex++]=accessValue(k+1,l)+j;
+            m_EBOPoints[eboIndex++]=indexOf(j,k,l);
+            m_EBOPoints[eboIndex++]=indexOf(j+1,k,l);
+            m_EBOPoints[eboIndex++]=indexOf(j,k+1,l);
         }
     }
 
@@ -75,9 +77,9 @@ void BezierPatch_Tetrahedron::makePatch()
     {
         for(size_t j=0; j<size()-l-1; ++j)
         {
-            m_EBOPoints[eboIndex++]=accessValue(k,l)+j;
-            m_EBOPoints[eboIndex++]=accessValue(k,l)+j+1;
-            m_EBOPoints[eboIndex++]=accessValue(k,l+1)+j;
+            m_EBOPoints[eboIndex++]=indexOf(j,k,l);
+            m_EBOPoints[eboIndex++]=indexOf(j+1,k,l);
+            m_EBOPoints[eboIndex++]=indexOf(j,k,l+1);
         }
     }
 
@@ -87,9 +89,9 @@ void BezierPatch_Tetrahedron::makePatch()
     {
         for(size_t l=0; l<size()-k-1; ++l)
         {
-            m_EBOPoints[eboIndex++]=accessValue(k,l);
-            m_EBOPoints[eboIndex++]=accessValue(k,l+1);
-            m_EBOPoints[eboIndex++]=accessValue(k+1,l);
+            m_EBOPoints[eboIndex++]=indexOf(j,k,l);
+            m_EBOPoints[eboIndex++]=indexOf(j,k,l+1);
+            m_EBOPoints[eboIndex++]=indexOf(j,k+1,l);
         }
     }
 
@@ -100,9 +102,9 @@ void BezierPatch_Tetrahedron::makePatch()
         for(size_t l=0; l<size()-k-1; ++l)
         {
             size_t j=size()-k-l-1;
-            m_EBOPoints[eboIndex++]=accessValue(k,l)+j;
-            m_EBOPoints[eboIndex++]=accessValue(k,l+1)+j-1;
-            m_EBOPoints[eboIndex++]=accessValue(k+1,l)+j-1;
+            m_EBOPoints[eboIndex++]=indexOf(j,k,l);
+            m_EBOPoints[eboIndex++]=indexOf(j-1,k,l+1);
+            m_EBOPoints[eboIndex++]=indexOf(j-1,k+1,l);
         }
     }
 }
@@ -230,6 +232,7 @@ BezierPatch_Tetrahedron& BezierPatch_Tetrahedron::operator=(const BezierPatch_Te
         m_size=other.size();
         BezierPatch::operator=(other);
         m_tmpCasteljau.resize(m_points.size());
+        mc_constValue=3*m_size*m_size + 6*m_size + 2;
     }
     return (*this);
 }
@@ -296,10 +299,25 @@ glm::vec3 &BezierPatch_Tetrahedron::getTmpCasteljau(size_t i, size_t j, size_t k
     return m_tmpCasteljau[accessValue(k, l)+j];
 }
 
+size_t BezierPatch_Tetrahedron::indexOf(size_t j, size_t k, size_t l) const
+{
+    return accessValue(k, l)+j;
+}
+
 unsigned int BezierPatch_Tetrahedron::accessValue(unsigned int k, unsigned int l) const
 {
-    //I performed the expansion on matlab to find this expression.
-    unsigned int leftSide = l!=0 ? (l*(l*l - 3*l*m_size - 3*l + 3*m_size*m_size + 6*m_size + 2))/6 : 0;
-    unsigned int rightSide = k!=0 ? (m_size-l)*k - (k*(k-1))/2 : 0;
-    return leftSide+rightSide;
+    //When making a function to access a simple vector using 4 values, we can first test what it is to try it using 3, then 2.
+    //In a Bezier tetrahedron, one of the variables is useless.
+    //In Bezier Triangles, we showed what it was like to use 2 variables to access a vector.
+    //By dividing the tetrahedron patch as a set of triangles, we can access the Bezier Tetrahedron CPs by
+    //multiplying the number of points in the triangle by value by the last coordinate.
+    //Unfortunately the access value of the triangle is dependant on the size of the triangle,
+    //and the size of the triangles behind the front triangle (l=0) decreases for each l value >0. We had to perform the expansion of a sum of a sum dependant on
+    //the first sum parameter on MATLAB to find a more convenient way to access the tetrahedron than iterating everytime to compute the sum.
+
+    //We also use mc_constValue, which pre-computed a part of the equation which is only dependant on the size of the patch.
+    unsigned int lDepth = l!=0 ? (l*(l*(l - 3*(m_size+1)) + mc_constValue))/6 : 0;
+
+    unsigned int kHeight = k!=0 ? (m_size-l)*k - (k*(k-1))/2 : 0;
+    return lDepth+kHeight;
 }

@@ -4,13 +4,15 @@
 #include "glm/glm.hpp"
 #include <GL/glew.h>
 #include <vector>
+#include <deque>
 #include <string>
+#include <QString>
 
 class BezierPatch
 {
 public:
     BezierPatch();
-    BezierPatch(size_t sizePatch);
+    BezierPatch(size_t sizePatch, const QString &name);
     virtual ~BezierPatch();
 
     //inline
@@ -57,8 +59,8 @@ public:
 
     //Id/name
     inline unsigned int id() const {return m_id;}
-    inline const std::string& name() const {return m_name;}
-    inline void setName(const std::string& name) {m_name=name;}
+    inline const QString& name() const {return m_name;}
+    inline void setName(const QString& name) {m_name=name;}
 
     /**
      * @brief computes the size of the VBO generated for the GPU, in bytes.
@@ -161,7 +163,7 @@ protected:
     inline const_iterator end() const {return m_points.end();}
 
     unsigned int                m_id;
-    std::string                 m_name;
+    QString                     m_name;
 
     std::vector<glm::vec3>      m_points;
     std::vector<unsigned int>   m_EBOPoints;
