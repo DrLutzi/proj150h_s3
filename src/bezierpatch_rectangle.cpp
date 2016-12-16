@@ -102,27 +102,31 @@ BezierPatch_Rectangle& BezierPatch_Rectangle::operator=(const BezierPatch_Rectan
     return (*this);
 }
 
-//static
+//static random generation
 
 BezierPatch_Rectangle* BezierPatch_Rectangle::generate(size_t m, size_t n, float xStep, float yStep, float max_noise)
 {
     BezierPatch_Rectangle *bp=new BezierPatch_Rectangle(m, n);
+
+    auto genNoise=[&](){
+        return (float((rand()%2000)-1000)/1000)*max_noise;
+    };
 
     float noise;
     glm::vec3 currentCP(0,0,0);
     size_t i,j;
     for(j=0; j<n; ++j)
     {
-        noise=(float((rand()%2000)-1000)/1000)*max_noise;
+        noise=genNoise();
         for(i=0; i<m; ++i)
         {
             bp->setPoint(i, j, currentCP);
-            noise=(float((rand()%2000)-1000)/1000)*max_noise;
+            noise=genNoise();
             currentCP.x+=xStep + noise;
-            noise=(float((rand()%2000)-1000)/1000)*max_noise;
+            noise=genNoise();
             currentCP.z=noise;
         }
-        noise=(float((rand()%2000)-1000)/1000)*max_noise;
+        noise=genNoise();
         currentCP.y+=yStep+noise;
     }
     return bp;

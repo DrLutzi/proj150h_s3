@@ -142,7 +142,8 @@ void Viewer::tp_init()
     m_manager->append(m_rectangularPatch, false);
     m_manager->append(m_triangularPatch, false);
     m_manager->append(m_examplePatch, false);
-    m_manager->append(m_hexaedronPatch);
+    m_manager->append(m_tetrahedronPatch, false);
+    m_manager->append(m_hexaedronPatch, true);
 }
 
 void Viewer::init()
@@ -168,6 +169,11 @@ void Viewer::init()
     camera()->showEntireScene();
 
     glPolygonMode(GL_FRONT_AND_BACK,m_surfacePolygonMode);
+}
+
+BezierPatch_Manager *const Viewer::manager()
+{
+    return m_manager;
 }
 
 void Viewer::rectangularPatch2UpperTrianglePatch()
@@ -240,14 +246,20 @@ void Viewer::generateBezierHexaedron(size_t m, size_t n, size_t p, float xStep, 
         {
             for(i=0;i<m;++i)
             {
+                currentCP.x+=noise;
                 m_hexaedronPatch->setPoint(i,j,k, currentCP);
-                currentCP.x+=xStep;
+                noise=(float((rand()%2000)-1000)/1000)*max_noise;
+                currentCP.x+=xStep+noise;
             }
-            currentCP.y+=yStep;
-            currentCP.x=0;
+            noise=(float((rand()%2000)-1000)/1000)*max_noise;
+            currentCP.y+=yStep+noise;
+            noise=(float((rand()%2000)-1000)/1000)*max_noise;
+            currentCP.x=noise;
         }
-        currentCP.z+=zStep;
-        currentCP.y=0;
+        noise=(float((rand()%2000)-1000)/1000)*max_noise;
+        currentCP.z+=zStep+noise;
+        noise=(float((rand()%2000)-1000)/1000)*max_noise;
+        currentCP.y=noise;
     }
 }
 
@@ -293,15 +305,27 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             m_manager->remakeScene();
             break;
 
-        case Qt::Key_D:
+        case Qt::Key_G:
 
-            rectangularPatch2UpperTrianglePatch();
+            m_hexaedronPatch->showPatch();
+            m_hexaedronPatch->showSurface();
+
+            m_tetrahedronPatch->hidePatch();
+            m_tetrahedronPatch->hideSurface();
+
+            m_manager->remakeScene();
             break;
 
         case Qt::Key_H:
 
-            m_examplePatch->toggleDrawPatch();
-            m_examplePatch->hideSurface();
+            m_hexaedronPatch->hidePatch();
+            m_hexaedronPatch->hideSurface();
+
+            m_tetrahedronPatch->showPatch();
+            m_tetrahedronPatch->showSurface();
+
+            m_manager->remakeScene();
+            break;
 
         default:
             break;

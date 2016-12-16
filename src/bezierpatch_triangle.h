@@ -28,6 +28,10 @@ public:
 
     BezierPatch_Triangle& operator=(const BezierPatch_Triangle& other);
 
+    //static random generation
+
+    static BezierPatch_Triangle* generate(size_t n, float xStep=1.0f, float yStep=1.0f, float max_noise=0.5f);
+
 protected:
 
     //others

@@ -237,6 +237,48 @@ BezierPatch_Tetrahedron& BezierPatch_Tetrahedron::operator=(const BezierPatch_Te
     return (*this);
 }
 
+//static random generation
+
+BezierPatch_Tetrahedron* BezierPatch_Tetrahedron::generate(size_t n, float xStep, float yStep, float zStep, float max_noise)
+{
+    BezierPatch_Tetrahedron *bp=new BezierPatch_Tetrahedron(n);
+
+    auto genNoise=[&](){
+        return (float((rand()%2000)-1000)/1000)*max_noise;
+    };
+
+    float noise;
+    glm::vec3 currentCP(0,0,0);
+    size_t i,j,k,l;
+    for(k=0; k<n; ++k)
+    {
+        noise=genNoise();
+        currentCP.z=k*zStep/2 + noise;
+        for(l=0; l<n-k; ++l)
+        {
+            noise=genNoise();
+            currentCP.x=(l+k)*xStep/2 + noise;
+            for(j=0; j<n-k-l; ++j)
+            {
+                i=n-k-l-1;
+                bp->setPoint(i,j,k,l, currentCP);
+                noise=genNoise();
+                currentCP.x+=xStep+noise;
+                noise=genNoise();
+                currentCP.y+=noise;
+                noise=genNoise();
+                currentCP.z+=noise;
+            }
+            noise=genNoise();
+            currentCP.z+=zStep+noise;
+        }
+        noise=genNoise();
+        currentCP.y+=yStep+noise;
+    }
+
+    return bp;
+}
+
 //others
 
 void BezierPatch_Tetrahedron::drawPatch() const

@@ -161,6 +161,45 @@ BezierPatch_Hexaedron& BezierPatch_Hexaedron::operator=(const BezierPatch_Hexaed
     return (*this);
 }
 
+//static random generation
+
+BezierPatch_Hexaedron* BezierPatch_Hexaedron::generate(size_t m, size_t n, size_t p, float xStep, float yStep, float zStep, float max_noise)
+{
+    float noise;
+
+    BezierPatch_Hexaedron *bp= new BezierPatch_Hexaedron(m,n,p);
+
+    auto genNoise=[&](){
+        return (float((rand()%2000)-1000)/1000)*max_noise;
+    };
+
+    glm::vec3 currentCP(0,0,0);
+    size_t i,j,k;
+    for(k=0;k<p;++k)
+    {
+        for(j=0;j<n;++j)
+        {
+            for(i=0;i<m;++i)
+            {
+                noise=genNoise();
+                currentCP.x+=noise;
+                bp->setPoint(i,j,k, currentCP);
+                noise=genNoise();
+                currentCP.x+=xStep+noise;
+            }
+            noise=genNoise();
+            currentCP.y+=yStep+noise;
+            noise=genNoise();
+            currentCP.x=noise;
+        }
+        noise=genNoise();
+        currentCP.z+=zStep+noise;
+        noise=genNoise();
+        currentCP.y=noise;
+    }
+    return bp;
+}
+
 //others
 
 void BezierPatch_Hexaedron::drawPatch() const

@@ -28,6 +28,10 @@ public:
 
     BezierPatch_Tetrahedron& operator=(const BezierPatch_Tetrahedron& other);
 
+    //static random generation
+
+    static BezierPatch_Tetrahedron* generate(size_t n, float xStep=1.0f, float yStep=1.0f, float zStep=-1.0f, float max_noise=0.5f);
+
 protected:
 
     //others

@@ -30,6 +30,10 @@ public:
 
     BezierPatch_Hexaedron& operator=(const BezierPatch_Hexaedron &other);
 
+    //static random generation
+
+    static BezierPatch_Hexaedron* generate(size_t m, size_t n, size_t p, float xStep=1.0f, float yStep=1.0f, float zStep=-1.0f, float max_noise=0.5f);
+
 protected:
 
     //others

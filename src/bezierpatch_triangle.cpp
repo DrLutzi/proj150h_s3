@@ -108,6 +108,39 @@ BezierPatch_Triangle& BezierPatch_Triangle::operator=(const BezierPatch_Triangle
     return (*this);
 }
 
+BezierPatch_Triangle* BezierPatch_Triangle::generate(size_t n, float xStep, float yStep, float max_noise)
+{
+    BezierPatch_Triangle *bp=new BezierPatch_Triangle(n);
+
+    auto genNoise=[&](){
+        return (float((rand()%2000)-1000)/1000)*max_noise;
+    };
+
+    float noise;
+    glm::vec3 currentCP(0,0,0);
+    size_t i,j,k;
+    for(k=0; k<n; ++k)
+    {
+        for(j=0; j<n-k; ++j)
+        {
+            i=n-k-j-1;
+            currentCP.x+=noise;
+            bp->setPoint(i,j,k, currentCP);
+            noise=genNoise();
+            currentCP.x+=xStep+noise;
+            noise=genNoise();
+            currentCP.y+=noise;
+            noise=genNoise();
+            currentCP.z+=noise;
+        }
+        noise=genNoise();
+        currentCP.x=(k)*xStep/2 + noise;
+        noise=genNoise();
+        currentCP.y+=yStep+noise;
+    }
+
+    return bp;
+}
 
 //////////////////////PROTECTED////////////////////////////
 
