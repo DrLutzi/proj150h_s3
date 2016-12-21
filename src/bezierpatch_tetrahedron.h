@@ -21,8 +21,9 @@ public:
 
     void setPoint(size_t i, size_t j, size_t k, size_t l, const glm::vec3& cp);
 
-    void makePatch();
-    void makeSurfaceDeCasteljau();
+    void makePatchEBO();
+    void makeSurfaceVBO();
+    void makeSurfaceEBO();
 
     //operators
 

@@ -1,4 +1,5 @@
 #include "bezierpatch_triangle.h"
+#include "errorsHandler.hpp"
 
 BezierPatch_Triangle::BezierPatch_Triangle() :
     BezierPatch(),
@@ -21,7 +22,8 @@ BezierPatch_Triangle::~BezierPatch_Triangle()
 
 const glm::vec3 &BezierPatch_Triangle::getPoint(size_t i, size_t j, size_t k) const
 {
-    if(i+j+k!=m_size-1); //TODO
+    if(i+j+k!=m_size-1)
+        ERROR("BezierPatch_Triangle : the triplet (i,j,k) is not a valid coordinate");
     return m_points[accessValue(k)+j];
 }
 
@@ -34,13 +36,14 @@ size_t BezierPatch_Triangle::size() const
 
 void BezierPatch_Triangle::setPoint(size_t i, size_t j, size_t k, const glm::vec3 &cp)
 {
-    if(i+j+k!=m_size-1); //TODO
+    if(i+j+k!=m_size-1)
+        ERROR("BezierPatch_Triangle : the triplet (i,j,k) is not a valid coordinate");
     m_points[accessValue(k)+j]=cp;
 
     notifyPatchChanged();
 }
 
-void BezierPatch_Triangle::makePatch()
+void BezierPatch_Triangle::makePatchEBO()
 {
     int eboIndex=0;
     //the size of the EBO is 3 times the number of times we draw a triangle while going an axis.
@@ -60,12 +63,30 @@ void BezierPatch_Triangle::makePatch()
     }
 }
 
-void BezierPatch_Triangle::makeSurfaceDeCasteljau()
+void BezierPatch_Triangle::makeSurfaceVBO()
 {
     size_t cappedResolution=std::max(size_t(2), m_resolution);
 
     m_surface.resize(0);
     m_surface.reserve(cappedResolution*cappedResolution);
+
+    //calculate entire VBO, from top to bottom, left to right (because why not?)
+    for(size_t k=0; k<cappedResolution; ++k) //"from bottom to top"
+    {
+        for(size_t j=0; j<cappedResolution-k; ++j) //also read "from left to right"
+        {
+            size_t i=cappedResolution-k-j-1;
+            m_surface.push_back(casteljau((float)(i)/(cappedResolution-1),
+                                         (float)(j)/(cappedResolution-1),
+                                         (float)(k)/(cappedResolution-1)));
+        }
+    }
+
+}
+
+void BezierPatch_Triangle::makeSurfaceEBO()
+{
+    size_t cappedResolution=std::max(size_t(2), m_resolution);
 
     m_EBOSurface.resize(0);
     m_EBOSurface.reserve(cappedResolution*cappedResolution*2);
@@ -77,11 +98,7 @@ void BezierPatch_Triangle::makeSurfaceDeCasteljau()
         for(size_t j=0; j<cappedResolution-k; ++j) //also read "from left to right"
         {
             size_t i=cappedResolution-k-j-1;
-            m_surface.push_back(casteljau((float)(i)/(cappedResolution-1),
-                                         (float)(j)/(cappedResolution-1),
-                                         (float)(k)/(cappedResolution-1)));
             //the point created, his right neighbor, and top neighbor.
-            //Here we need to be careful with the borders since we can't use the precomputed vector.
             if(i!=0)
             {
                 m_EBOSurface.push_back(eboIndex);
@@ -92,8 +109,8 @@ void BezierPatch_Triangle::makeSurfaceDeCasteljau()
                 ++eboIndex;
         }
     }
-
 }
+
 
 //operators
 
@@ -110,6 +127,7 @@ BezierPatch_Triangle& BezierPatch_Triangle::operator=(const BezierPatch_Triangle
 
 BezierPatch_Triangle* BezierPatch_Triangle::generate(size_t n, float xStep, float yStep, float max_noise)
 {
+    //TODO : bug
     BezierPatch_Triangle *bp=new BezierPatch_Triangle(n);
 
     auto genNoise=[&](){

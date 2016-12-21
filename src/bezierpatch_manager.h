@@ -71,10 +71,12 @@ public:
 
     bool rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float& distance);
     void updateSelectedCP(const glm::vec3& newPosition);
-    inline void releaseSelectedCP(){m_selectedCP=NULL; m_selectedPatch=NULL;}
+    void releaseSelectedCP();
 
-    //BezierPatch *&operator[](size_t i){return m_patchs[i];} //doesn't work??
-    void set(size_t index, BezierPatch* patch){m_patchs[index]=patch;}
+    BezierPatch *operator[](unsigned int i);
+
+    void setPatch(unsigned int index, BezierPatch* patch);
+    BezierPatch* getPatch(unsigned int index);
 
 private slots:
 

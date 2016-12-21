@@ -18,23 +18,28 @@ public:
     //inline
     //show and hide patch or surface
 
-    inline void setDrawPatch(bool draw){m_drawPatch=draw; if(m_drawPatch) makePatch();}
-    inline void setDrawSurface(bool draw){m_drawSurface=draw; if(m_drawSurface) makeSurfaceDeCasteljau();}
+    void setDrawCP(bool draw);
+    void setDrawPatch(bool draw);
+    void setDrawSurface(bool draw);
 
-    inline bool isDrawPatch() const {return m_drawPatch;}
-    inline bool isDrawSurface() const {return m_drawSurface;}
+    void toggleDrawCP();
+    void toggleDrawPatch();
+    void toggleDrawSurface();
 
-    inline void toggleDrawPatch(){m_drawPatch=!m_drawPatch; if(m_drawPatch) makePatch();}
-    inline void toggleDrawSurface(){m_drawSurface=!m_drawSurface; if(m_drawSurface) makeSurfaceDeCasteljau();}
+    void hideCP();
+    void hidePatch();
+    void hideSurface();
 
-    inline void hidePatch(){m_drawPatch=false;}
-    inline void hideSurface(){m_drawSurface=false;}
-
-    inline void showPatch(){m_drawPatch=true; makePatch();}
-    inline void showSurface(){m_drawSurface=true; makeSurfaceDeCasteljau();}
+    void showCP();
+    void showPatch();
+    void showSurface();
 
     inline void notifyPatchChanged(){m_patchChanged=true; m_surfaceChanged=true;} //patch changed => surface changed
     inline void notifySurfaceChanged(){m_surfaceChanged=true;}
+
+    inline bool isDrawCP() const {return m_drawCP;}
+    inline bool isDrawPatch() const {return m_drawPatch;}
+    inline bool isDrawSurface() const {return m_drawSurface;}
 
     //OpenGL indexes
 
@@ -87,9 +92,9 @@ public:
     /**
      * @brief setResolution sets the surface's resolution. How it is handled varies between patches.
      */
-    virtual void setResolution(size_t resolution);
-    virtual inline size_t resolution() const {return m_resolution;}
-    virtual void clear();
+    void setResolution(size_t resolution);
+    size_t resolution() const;
+    void clear();
 
     void draw(GLint uColorLocation);
 
@@ -106,16 +111,22 @@ public:
     glm::vec3* rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float &r, float &distance) const;
 
     /**
-     * @brief makePatch computes the lines of the patch.
-     * Override this at the same time as drawLines and fill m_points and m_EBOPoints.
+     * @brief makePatchEBO computes the lines of the patch.
+     * Override this at the same time as drawLines and fill m_EBOPoints.
      */
-    virtual void makePatch()=0;
+    virtual void makePatchEBO()=0;
 
     /**
      * @brief makeSurfaceDeCasteljau computes the surface polygons (w/ the CPU) using DeCasteljau's algorithm.
-     * Override this at the same time as drawBezier and fill m_bezier and m_EBOBezier.
+     * Override this at the same time as drawBezier and fill m_bezier.
      */
-    virtual void makeSurfaceDeCasteljau()=0;
+    virtual void makeSurfaceVBO()=0;
+
+    /**
+     * @brief makeSurfaceDeCasteljau computes the index of the surface polygons (w/ the CPU) using DeCasteljau's algorithm.
+     * Override this at the same time as drawBezier and makeSurfaceVBO, and fill m_bezier.
+     */
+    virtual void makeSurfaceEBO()=0;
 
     void updateVBOPatch(GLint vboId, GLint eboId);
     void updateVBOSurface(GLint vboId, GLint eboId);
@@ -172,9 +183,8 @@ protected:
     std::vector<unsigned int>   m_EBOSurface;
 
     size_t                      m_resolution;
-    bool                        m_patchChanged;
-    bool                        m_surfaceChanged;
 
+    bool                        m_drawCP;
     bool                        m_drawPatch;
     bool                        m_drawSurface;
 
@@ -186,6 +196,13 @@ protected:
     glm::vec4                   m_controlPointColor;
     glm::vec4                   m_patchColor;
     glm::vec4                   m_surfaceColor;
+
+    bool                        m_patchChanged;
+    bool                        m_surfaceChanged;
+
+
+    bool                        m_patchEBOCalculationNeeded;
+    bool                        m_surfaceEBOCalculationNeeded;
 
     //static
 

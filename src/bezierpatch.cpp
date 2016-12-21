@@ -10,13 +10,16 @@ BezierPatch::BezierPatch() :
     m_EBOPoints         (0),
     m_surface           (0),
     m_resolution        (0),
+    m_drawCP            (false),
     m_drawPatch         (false),
     m_drawSurface       (false),
     m_firstVBO          (0),
     m_firstEBO          (0),
     m_baseVertexEBO     (0),
     m_patchChanged      (true),
-    m_surfaceChanged    (true)
+    m_surfaceChanged    (true),
+    m_patchEBOCalculationNeeded    (true),
+    m_surfaceEBOCalculationNeeded  (true)
 {
 }
 
@@ -28,19 +31,132 @@ BezierPatch::BezierPatch(size_t sizePatch, const QString& name) :
     m_surface           (),
     m_EBOSurface        (),
     m_resolution        (0),
+    m_drawCP            (false),
     m_drawPatch         (false),
     m_drawSurface       (false),
     m_firstVBO          (0),
     m_firstEBO          (0),
     m_baseVertexEBO     (0),
     m_patchChanged      (true),
-    m_surfaceChanged    (true)
+    m_surfaceChanged    (true),
+    m_patchEBOCalculationNeeded    (true),
+    m_surfaceEBOCalculationNeeded  (true)
 {}
 
 BezierPatch::~BezierPatch()
 {}
 
 //////////////////////PUBLIC////////////////////////////
+
+//draw, show, hide...
+
+void BezierPatch::setDrawCP(bool draw)
+{
+    m_drawCP=draw;
+    if(m_drawCP && m_patchEBOCalculationNeeded)
+    {
+        makePatchEBO();
+        m_patchEBOCalculationNeeded=false;
+    }
+}
+
+void BezierPatch::setDrawPatch(bool draw)
+{
+    m_drawPatch=draw;
+    if(m_drawPatch && m_patchEBOCalculationNeeded)
+    {
+        makePatchEBO();
+        m_patchEBOCalculationNeeded=false;
+    }
+}
+
+void BezierPatch::setDrawSurface(bool draw)
+{
+    m_drawSurface=draw;
+    if(m_drawSurface && m_surfaceEBOCalculationNeeded)
+    {
+        makeSurfaceVBO();
+        makeSurfaceEBO();
+        m_surfaceEBOCalculationNeeded=false;
+    }
+}
+
+void BezierPatch::toggleDrawCP()
+{
+    m_drawCP=!m_drawCP;
+    if(m_drawCP && m_patchEBOCalculationNeeded)
+    {
+        makePatchEBO();
+        m_patchEBOCalculationNeeded=false;
+    }
+}
+
+void BezierPatch::toggleDrawPatch()
+{
+    m_drawPatch=!m_drawPatch;
+    if(m_drawPatch && m_patchEBOCalculationNeeded)
+    {
+        makePatchEBO();
+        m_patchEBOCalculationNeeded=false;
+    }
+}
+
+void BezierPatch::toggleDrawSurface()
+{
+    m_drawSurface=!m_drawSurface;
+    if(m_drawSurface && m_surfaceEBOCalculationNeeded)
+    {
+        makeSurfaceVBO();
+        makeSurfaceEBO();
+        m_surfaceEBOCalculationNeeded=false;
+    }
+}
+
+void BezierPatch::hideCP()
+{
+    m_drawCP=false;
+}
+
+void BezierPatch::hidePatch()
+{
+    m_drawPatch=false;
+}
+
+void BezierPatch::hideSurface()
+{
+    m_drawSurface=false;
+}
+
+void BezierPatch::showCP()
+{
+    m_drawCP=true;
+    if(m_patchEBOCalculationNeeded)
+    {
+        makePatchEBO();
+        m_patchEBOCalculationNeeded=false;
+    }
+}
+
+void BezierPatch::showPatch()
+{
+    m_drawPatch=true;
+    if(m_patchEBOCalculationNeeded)
+    {
+        makePatchEBO();
+        m_patchEBOCalculationNeeded=false;
+    }
+}
+
+void BezierPatch::showSurface()
+{
+    m_drawSurface=true;
+    if(m_surfaceEBOCalculationNeeded)
+    {
+        makeSurfaceVBO();
+        makeSurfaceEBO();
+        m_surfaceEBOCalculationNeeded=false;
+    }
+}
 
 BezierPatch& BezierPatch::operator=(const BezierPatch& other)
 {
@@ -50,6 +166,7 @@ BezierPatch& BezierPatch::operator=(const BezierPatch& other)
         m_name=other.name();
         m_points.resize(0);
         m_points.reserve(other.getNumberOfPointsPatch());
+        m_patchEBOCalculationNeeded=false;
         for(const_iterator it=other.begin(); it!=other.end(); ++it)
         {
             m_points.push_back(*it);
@@ -59,6 +176,7 @@ BezierPatch& BezierPatch::operator=(const BezierPatch& other)
         setFirstEBO(other.firstEBO());
         setBaseVertexEBO(other.baseVertexEBO());
 
+        setDrawCP(other.isDrawCP());
         setDrawPatch(other.isDrawPatch());
         setDrawSurface(other.isDrawSurface());
 
@@ -73,8 +191,11 @@ BezierPatch& BezierPatch::operator=(const BezierPatch& other)
 
 void BezierPatch::updateVBOPatch(GLint vboId, GLint eboId)
 {
-    if(!m_drawPatch || !m_patchChanged)
+    if((!m_drawPatch && !m_drawCP) || !m_patchChanged)
         return;
+
+    if(m_surfaceEBOCalculationNeeded) //this should never happen yet
+        makePatchEBO();
 
     glBindBuffer(GL_ARRAY_BUFFER, vboId);
     //offset starts at where we told the bezier patch to start putting datas in the VBO. Copy m_points.
@@ -95,7 +216,9 @@ void BezierPatch::updateVBOSurface(GLint vboId, GLint eboId)
         return;
 
     //We need to rebuild the surface often because it is dependant on the control points.
-    makeSurfaceDeCasteljau();
+    if(m_surfaceEBOCalculationNeeded)
+        makeSurfaceEBO();
+    makeSurfaceVBO();
 
     glBindBuffer(GL_ARRAY_BUFFER, vboId);
     //offset starts after the VBO datas where points have been input
@@ -112,8 +235,16 @@ void BezierPatch::updateVBOSurface(GLint vboId, GLint eboId)
 
 void BezierPatch::setResolution(size_t resolution)
 {
-    m_resolution=resolution;
+    m_resolution=resolution < 100 ? (resolution > 2 ? resolution : 2) : 99;
     notifySurfaceChanged();
+    makeSurfaceVBO();
+    makeSurfaceEBO();
+    m_surfaceEBOCalculationNeeded=false;
+}
+
+size_t BezierPatch::resolution() const
+{
+    return m_resolution;
 }
 
 void BezierPatch::clear()
@@ -169,7 +300,7 @@ void BezierPatch::setDrawingColor(const glm::vec4& color, GLint uColorLocation)
 
 void BezierPatch::drawControlPoints() const
 {
-    if(m_drawPatch)
+    if(m_drawCP)
     {
         glDrawElementsBaseVertex(GL_POINTS, m_EBOPoints.size(), GL_UNSIGNED_INT, (GLvoid*)(m_firstEBO), m_baseVertexEBO);
     }

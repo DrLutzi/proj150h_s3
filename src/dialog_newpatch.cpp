@@ -56,6 +56,5 @@ void Dialog_newPatch::on_buttonBox_accepted()
             m_createdPatch = NULL;
             break;
     }
-
     cast_parent->notifyNewPatchFromDialogNewPatch(m_createdPatch);
 }

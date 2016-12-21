@@ -1,4 +1,5 @@
 #include "bezierpatch_tetrahedron.h"
+#include "errorsHandler.hpp"
 
 BezierPatch_Tetrahedron::BezierPatch_Tetrahedron() :
     BezierPatch(),
@@ -28,7 +29,8 @@ size_t BezierPatch_Tetrahedron::size() const
 
 const glm::vec3 &BezierPatch_Tetrahedron::getPoint(size_t i, size_t j, size_t k, size_t l) const
 {
-    if(i+j+k+l!=m_size-1); //TODO
+    if(i+j+k+l!=m_size-1)
+        ERROR("BezierPatch_Tetrahedron : the quadruplet (i,j,k,l) is not a valid coordinate");
     return m_points[indexOf(j,k,l)];
 }
 
@@ -36,11 +38,12 @@ const glm::vec3 &BezierPatch_Tetrahedron::getPoint(size_t i, size_t j, size_t k,
 
 void BezierPatch_Tetrahedron::setPoint(size_t i, size_t j, size_t k, size_t l, const glm::vec3& cp)
 {
-    if(i+j+k+l!=m_size-1); //TODO
+    if(i+j+k+l!=m_size-1)
+        ERROR("BezierPatch_Tetrahedron : the quadruplet (i,j,k,l) is not a valid coordinate");
     m_points[indexOf(j,k,l)]=cp;
 }
 
-void BezierPatch_Tetrahedron::makePatch()
+void BezierPatch_Tetrahedron::makePatchEBO()
 {
     int eboIndex=0;
 
@@ -109,12 +112,63 @@ void BezierPatch_Tetrahedron::makePatch()
     }
 }
 
-void BezierPatch_Tetrahedron::makeSurfaceDeCasteljau()
+void BezierPatch_Tetrahedron::makeSurfaceVBO()
 {
     size_t cappedResolution=std::max(size_t(2), m_resolution);
 
     m_surface.resize(0);
     m_surface.reserve(cappedResolution*cappedResolution*2);
+
+    //we will only calculate the external surface. More options could be added.
+    //To do this, we need to succesfully display the 4 external triangles of the thetraedron surface.
+    //These faces all have a common point : i,j,k or l is always equal to 0,
+    //hence we will calculate a triangle bezier surface for l=0 (front), then k=0, then j=0 and finally i=0.
+    //Each triangle will be proprely oriented to have a calculation similar to the one of BezierPatch_Triangle.
+
+    size_t i,j,k,l;
+
+    auto fillVBO=[&](size_t &first, size_t &second, size_t &third)
+    {
+        for(first=0; first<cappedResolution; ++first) //"from bottom to top"
+        {
+            for(second=0; second<cappedResolution-first; ++second) //also read "from left to right"
+            {
+                third=cappedResolution-first-second-1;
+                m_surface.push_back(casteljau((float)(i)/(cappedResolution-1),
+                                             (float)(j)/(cappedResolution-1),
+                                             (float)(k)/(cappedResolution-1),
+                                            (float)(l)/(cappedResolution-1)));
+                //the point created, his right neighbor, and top neighbor.
+                //Here we need to be careful with the borders since we can't use the precomputed vector.
+            }
+        }
+
+    };
+
+    //First step: l=0 (front)
+    l=0;
+    fillVBO(k, j, i);
+
+    //Second step: k=0 (bottom)
+    //You'll note that the bottom line of the triangle was already drawn.
+    //Though, starting l at 0 is a more convenient way to draw the VAO afterwards.
+    k=0;
+    fillVBO(l, i, j);
+
+    //Third step: j=0 (left)
+    j=0;
+    fillVBO(l, k, i);
+
+    //Final step: i=0 (right)
+    i=0;
+    fillVBO(l, j, k);
+
+    return;
+}
+
+void BezierPatch_Tetrahedron::makeSurfaceEBO()
+{
+    size_t cappedResolution=std::max(size_t(2), m_resolution);
 
     m_EBOSurface.resize(0);
     m_EBOSurface.reserve(cappedResolution*cappedResolution*8);
@@ -128,97 +182,45 @@ void BezierPatch_Tetrahedron::makeSurfaceDeCasteljau()
     int eboIndex=0;
     size_t i,j,k,l;
 
+    auto fillEBO=[&](size_t &first, size_t &second, size_t &third)
+    {
+        for(first=0; first<cappedResolution; ++first) //"from bottom to top"
+        {
+            for(second=0; second<cappedResolution-first; ++second) //also read "from left to right"
+            {
+                third=cappedResolution-first-second-1;
+                //the point created, his right neighbor, and top neighbor.
+                //Here we need to be careful with the borders since we can't use the precomputed vector.
+                if(third!=0)
+                {
+                    m_EBOSurface.push_back(eboIndex);
+                    m_EBOSurface.push_back(cappedResolution-first+eboIndex);
+                    m_EBOSurface.push_back(++eboIndex);
+                }
+                else
+                    ++eboIndex;
+            }
+        }
+
+    };
+
     //First step: l=0 (front)
     l=0;
-    for(k=0; k<cappedResolution; ++k) //"from bottom to top"
-    {
-        for(j=0; j<cappedResolution-k; ++j) //also read "from left to right"
-        {
-            i=cappedResolution-k-j-1;
-            m_surface.push_back(casteljau((float)(i)/(cappedResolution-1),
-                                         (float)(j)/(cappedResolution-1),
-                                         (float)(k)/(cappedResolution-1),
-                                        (float)(l)/(cappedResolution-1)));
-            //the point created, his right neighbor, and top neighbor.
-            //Here we need to be careful with the borders since we can't use the precomputed vector.
-            if(i!=0)
-            {
-                m_EBOSurface.push_back(eboIndex);
-                m_EBOSurface.push_back(cappedResolution-k+eboIndex);
-                m_EBOSurface.push_back(++eboIndex);
-            }
-            else
-                ++eboIndex;
-        }
-    }
+    fillEBO(k, j, i);
 
     //Second step: k=0 (bottom)
     //You'll note that the bottom line of the triangle was already drawn.
     //Though, starting l at 0 is a more convenient way to draw the VAO afterwards.
     k=0;
-    for(l=0; l<cappedResolution; ++l)
-    {
-        for(i=0; i<cappedResolution-l; ++i)
-        {
-            j=cappedResolution-l-i-1;
-            m_surface.push_back(casteljau((float)(i)/(cappedResolution-1),
-                                         (float)(j)/(cappedResolution-1),
-                                         (float)(k)/(cappedResolution-1),
-                                        (float)(l)/(cappedResolution-1)));
-            if(j!=0)
-            {
-                m_EBOSurface.push_back(eboIndex);
-                m_EBOSurface.push_back(cappedResolution-l+eboIndex);
-                m_EBOSurface.push_back(++eboIndex);
-            }
-            else
-                ++eboIndex;
-        }
-    }
+    fillEBO(l, i, j);
 
     //Third step: j=0 (left)
     j=0;
-    for(l=0; l<cappedResolution; ++l)
-    {
-        for(k=0; k<cappedResolution-l; ++k)
-        {
-            i=cappedResolution-l-k-1;
-            m_surface.push_back(casteljau((float)(i)/(cappedResolution-1),
-                                         (float)(j)/(cappedResolution-1),
-                                         (float)(k)/(cappedResolution-1),
-                                        (float)(l)/(cappedResolution-1)));
-            if(i!=0)
-            {
-                m_EBOSurface.push_back(eboIndex);
-                m_EBOSurface.push_back(cappedResolution-l+eboIndex);
-                m_EBOSurface.push_back(++eboIndex);
-            }
-            else
-                ++eboIndex;
-        }
-    }
+    fillEBO(l, k, i);
 
     //Final step: i=0 (right)
     i=0;
-    for(l=0; l<cappedResolution; ++l)
-    {
-        for(j=0; j<cappedResolution-l; ++j)
-        {
-            k=cappedResolution-l-j-1;
-            m_surface.push_back(casteljau((float)(i)/(cappedResolution-1),
-                                         (float)(j)/(cappedResolution-1),
-                                         (float)(k)/(cappedResolution-1),
-                                        (float)(l)/(cappedResolution-1)));
-            if(k!=0)
-            {
-                m_EBOSurface.push_back(eboIndex);
-                m_EBOSurface.push_back(cappedResolution-l+eboIndex);
-                m_EBOSurface.push_back(++eboIndex);
-            }
-            else
-                ++eboIndex;
-        }
-    }
+    fillEBO(l, j, k);
 
     return;
 }
@@ -260,7 +262,7 @@ BezierPatch_Tetrahedron* BezierPatch_Tetrahedron::generate(size_t n, float xStep
             currentCP.x=(l+k)*xStep/2 + noise;
             for(j=0; j<n-k-l; ++j)
             {
-                i=n-k-l-1;
+                i=n-k-l-j-1;
                 bp->setPoint(i,j,k,l, currentCP);
                 noise=genNoise();
                 currentCP.x+=xStep+noise;

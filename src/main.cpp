@@ -2,6 +2,7 @@
 #include "mainwindow.h"
 #include "viewer.h"
 #include "boost/math/special_functions/factorials.hpp"
+#include "errorsHandler.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -15,8 +16,6 @@ int main(int argc, char *argv[])
 
     MainWindow mw;
     mw.show();
-    //   Viewer view;
-        //view.show();
 
 	return a.exec();
 

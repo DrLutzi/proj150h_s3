@@ -185,6 +185,27 @@ void BezierPatch_Manager::updateSelectedCP(const glm::vec3& newPosition)
     }
 }
 
+void BezierPatch_Manager::releaseSelectedCP()
+{
+    m_selectedCP=NULL;
+    m_selectedPatch=NULL;
+}
+
+BezierPatch *BezierPatch_Manager::operator[](unsigned int i)
+{
+    return m_patchs[i];
+}
+
+void BezierPatch_Manager::setPatch(unsigned int index, BezierPatch* patch)
+{
+    m_patchs[index]=patch;
+}
+
+BezierPatch* BezierPatch_Manager::getPatch(unsigned int index)
+{
+    return m_patchs[index];
+}
+
 //////////////////////PRIV.SLOT////////////////////////////
 
 void BezierPatch_Manager::update()

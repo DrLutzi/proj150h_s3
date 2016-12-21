@@ -35,7 +35,7 @@ void BezierPatch_Hexaedron::setPoint(size_t i, size_t j, size_t k, const glm::ve
     m_points[indexOf(i,j,k)]=cp;
 }
 
-void BezierPatch_Hexaedron::makePatch()
+void BezierPatch_Hexaedron::makePatchEBO()
 {
     //Since we decided to only display the outside surface, we have to compute a surface
     //for each face of the hexaedron. There are six.
@@ -93,57 +93,94 @@ void BezierPatch_Hexaedron::makePatch()
     fillEBO(j,k,sizeN(),sizeP());
 }
 
-void BezierPatch_Hexaedron::makeSurfaceDeCasteljau()
+void BezierPatch_Hexaedron::makeSurfaceVBO()
 {
     size_t cappedResolution=std::max(size_t(2), m_resolution);
 
     m_surface.resize(0);
     m_surface.reserve(cappedResolution*cappedResolution*6);
 
+    size_t i,j,k;
+    //We have to do the same thing 6 times again! Just do BezierPatch_rectangle for 6 faces.
+    auto fillVBO=[&](size_t &first, size_t &second)
+    {
+        for(first=0; first<cappedResolution; ++first)
+            for(second=0; second<cappedResolution; ++second)
+                m_surface.push_back(casteljau((float)(i)/(cappedResolution-1), (float)j/(cappedResolution-1), (float)k/(cappedResolution-1)));
+
+    };
+
+    //Step 1: k=0 (front face)
+    k=0;
+    fillVBO(i,j);
+
+    //Step 2: k=P (back face)
+    k=cappedResolution-1;
+    fillVBO(i,j);
+
+    //Step 3: j=0 (upper face)
+    j=0;
+    fillVBO(i,k);
+
+    //Step 4: j=N (lower face)
+    j=cappedResolution-1;
+    fillVBO(i,k);
+
+    //Step 5: i=0 (left face)
+    i=0;
+    fillVBO(j,k);
+
+    //Step 6: i=M (right face)
+    i=cappedResolution-1;
+    fillVBO(j,k);
+}
+
+void BezierPatch_Hexaedron::makeSurfaceEBO()
+{
+    size_t cappedResolution=std::max(size_t(2), m_resolution);
+
     m_EBOSurface.resize(0);
     m_EBOSurface.reserve(cappedResolution*cappedResolution*12);
 
     size_t i,j,k, EBOSize=0;
     //We have to do the same thing 6 times again! Just do BezierPatch_rectangle for 6 faces.
-    auto fillVBOnEBO=[&](size_t &first, size_t &second)
+    auto fillEBO=[&](size_t &first, size_t &second)
     {
         for(first=0; first<cappedResolution; ++first)
             for(second=0; second<cappedResolution; ++second)
             {
-                m_surface.push_back(casteljau((float)(i)/(cappedResolution-1), (float)j/(cappedResolution-1), (float)k/(cappedResolution-1)));
                 if(first+1<cappedResolution)
                 {
                     m_EBOSurface.push_back(EBOSize + first*cappedResolution+second);
                     m_EBOSurface.push_back(EBOSize + (first+1)*cappedResolution+second);
                 }
             }
-
-        EBOSize=m_surface.size();
+        EBOSize+=cappedResolution*cappedResolution;
     };
 
     //Step 1: k=0 (front face)
     k=0;
-    fillVBOnEBO(i,j);
+    fillEBO(i,j);
 
     //Step 2: k=P (back face)
     k=cappedResolution-1;
-    fillVBOnEBO(i,j);
+    fillEBO(i,j);
 
     //Step 3: j=0 (upper face)
     j=0;
-    fillVBOnEBO(i,k);
+    fillEBO(i,k);
 
     //Step 4: j=N (lower face)
     j=cappedResolution-1;
-    fillVBOnEBO(i,k);
+    fillEBO(i,k);
 
     //Step 5: i=0 (left face)
     i=0;
-    fillVBOnEBO(j,k);
+    fillEBO(j,k);
 
     //Step 6: i=M (right face)
     i=cappedResolution-1;
-    fillVBOnEBO(j,k);
+    fillEBO(j,k);
 }
 
 //operators

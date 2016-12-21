@@ -66,11 +66,11 @@ public:
     typedef std::vector<ProductPolynom3Var>::iterator iterator;
     typedef std::vector<ProductPolynom3Var>::const_iterator const_iterator;
 
-    inline iterator begin();
-    inline const_iterator begin() const;
+    inline iterator begin() {return m_expression.begin();}
+    inline const_iterator begin() const {return m_expression.begin();}
 
-    inline iterator end();
-    inline const_iterator end() const;
+    inline iterator end() {return m_expression.end();}
+    inline const_iterator end() const {return m_expression.end();}
 
     /**
      * @brief reserve reserveSize in the current sum array

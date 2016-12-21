@@ -44,7 +44,7 @@ void BezierPatch_Rectangle::setPoint(size_t i, size_t j, const glm::vec3 &cp)
 }
 
 
-void BezierPatch_Rectangle::makePatch()
+void BezierPatch_Rectangle::makePatchEBO()
 {
     m_EBOPoints.resize(sizeM()*sizeN()*2);
     if(m_points.size()>1)
@@ -68,13 +68,11 @@ void BezierPatch_Rectangle::makePatch()
     }
 }
 
-void BezierPatch_Rectangle::makeSurfaceDeCasteljau()
+void BezierPatch_Rectangle::makeSurfaceVBO()
 {
     m_surface.resize(0);
-    m_EBOSurface.resize(0);
     size_t cappedResolution=std::max(size_t(2), m_resolution);
     m_surface.reserve(cappedResolution*cappedResolution);
-    m_EBOSurface.reserve(cappedResolution*cappedResolution*2);
 
     //We will draw this VBO using GL_TRIANGLE_STRIP, so we need to store alternative sides indexes for each iteration into the EBO to draw triangles
 
@@ -82,6 +80,20 @@ void BezierPatch_Rectangle::makeSurfaceDeCasteljau()
         for(size_t j=0; j<cappedResolution; ++j)
         {
             m_surface.push_back(casteljau((float)(i)/(cappedResolution-1), (float)j/(cappedResolution-1)));
+        }
+}
+
+void BezierPatch_Rectangle::makeSurfaceEBO()
+{
+    m_EBOSurface.resize(0);
+    size_t cappedResolution=std::max(size_t(2), m_resolution);
+    m_EBOSurface.reserve(cappedResolution*cappedResolution*2);
+
+    //We will draw this VBO using GL_TRIANGLE_STRIP, so we need to store alternative sides indexes for each iteration into the EBO to draw triangles
+
+    for(size_t i=0; i<cappedResolution; ++i)
+        for(size_t j=0; j<cappedResolution; ++j)
+        {
             if(i+1<cappedResolution)
             {
                 m_EBOSurface.push_back(i*cappedResolution+j);
@@ -120,6 +132,7 @@ BezierPatch_Rectangle* BezierPatch_Rectangle::generate(size_t m, size_t n, float
         noise=genNoise();
         for(i=0; i<m; ++i)
         {
+            currentCP.x+=noise;
             bp->setPoint(i, j, currentCP);
             noise=genNoise();
             currentCP.x+=xStep + noise;
@@ -128,6 +141,7 @@ BezierPatch_Rectangle* BezierPatch_Rectangle::generate(size_t m, size_t n, float
         }
         noise=genNoise();
         currentCP.y+=yStep+noise;
+        currentCP.x=0;
     }
     return bp;
 }

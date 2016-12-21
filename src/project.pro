@@ -9,9 +9,14 @@ CONFIG += c++11
 QT += core gui opengl xml widgets
 TARGET = tp_ogl_basic
 TEMPLATE = app
+TEMPLATE += subdirs
 
 #for QGLViewer & glm
 INCLUDEPATH += ../
+
+DEPENDPATH += $$_PRO_FILE_PWD_/BezierPatch
+
+VPATH += $$_PRO_FILE_PWD_ $$_PRO_FILE_PWD_/BezierPatch
 
 DESTDIR = ../bin/
 
@@ -76,7 +81,8 @@ HEADERS  += viewer.h \
     bezierpatch_hexaedron.h \
     mainwindow.h \
     widget_patchitem.h \
-    dialog_newpatch.h
+    dialog_newpatch.h \
+    errorsHandler.hpp
 
 OTHER_FILES += \
     simpleShader.vert \

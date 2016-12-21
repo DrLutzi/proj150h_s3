@@ -97,26 +97,6 @@ Sum_ProductPolynom3Var::Sum_ProductPolynom3Var(const Sum_ProductPolynom3Var& oth
         m_expression.push_back(*it);
 }
 
-Sum_ProductPolynom3Var::iterator Sum_ProductPolynom3Var::begin()
-{
-    return m_expression.begin();
-}
-
-Sum_ProductPolynom3Var::const_iterator Sum_ProductPolynom3Var::begin() const
-{
-    return m_expression.begin();
-}
-
-Sum_ProductPolynom3Var::iterator Sum_ProductPolynom3Var::end()
-{
-    return m_expression.end();
-}
-
-Sum_ProductPolynom3Var::const_iterator Sum_ProductPolynom3Var::end() const
-{
-    return m_expression.end();
-}
-
 void Sum_ProductPolynom3Var::reserve(size_t reserveSize)
 {
     m_expression.reserve(reserveSize);
