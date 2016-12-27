@@ -56,6 +56,18 @@ private:
 
     std::vector<glm::vec3> m_tmpCasteljau;
 
+    /*
+
+    The patch is constructed following this nice 3D ascii blueprint:
+
+    0,0 --------> j = N-1
+      | \
+      |  \
+      |   \ k=P-1
+      v    x
+ i = M-1
+
+    */
 };
 
 #endif // BEZIERPATCH_HEXAEDRON_H

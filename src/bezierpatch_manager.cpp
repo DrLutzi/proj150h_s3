@@ -2,6 +2,8 @@
 
 BezierPatch_Manager::BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation, QObject *parent) :
     QObject(parent),
+    m_patchs(),
+    m_dependencies(),
     m_VAOId(vaoId),
     m_VBOPositionId(vboPositionId),
     m_EBOId(eboId),
@@ -57,21 +59,47 @@ void BezierPatch_Manager::append(BezierPatch* patch, bool reallocate)
     }
 }
 
-BezierPatch *BezierPatch_Manager::remove(iterator position)
-{
-    BezierPatch *removedPtr=(*position).second;
-    m_patchs.erase(position);
-    remakeScene();
-    return removedPtr;
-}
-
 BezierPatch *BezierPatch_Manager::remove(unsigned int id)
 {
     iterator position=m_patchs.find(id);
-    BezierPatch *removedPtr=(*position).second;
-    m_patchs.erase(position);
-    remakeScene();
-    return removedPtr;
+    if(position!=m_patchs.end())
+    {
+        BezierPatch *removedPtr=(*position).second;
+        m_patchs.erase(position);
+        remakeScene();
+
+        std::map<unsigned int, PatchDependencySolver>::iterator dependencyPosition = m_dependencies.find(id);
+        if(dependencyPosition!=m_dependencies.end())
+        {
+            m_dependencies.erase(dependencyPosition);
+        }
+
+        return removedPtr;
+    }
+    else
+        WARNING("BezierPatch_Manager - remove: id wasn't found");
+    return NULL;
+}
+
+//dependencies
+
+PatchDependencySolver &BezierPatch_Manager::addDependency(unsigned int id)
+{
+     std::map<unsigned int, PatchDependencySolver>::iterator it
+             =m_dependencies.insert(std::pair<unsigned int, PatchDependencySolver>(id, PatchDependencySolver(*this))).first;
+     return (*it).second;
+}
+
+void BezierPatch_Manager::updateDependency(unsigned int id)
+{
+    try
+    {
+        m_dependencies.at(id).updateDependency();
+    }
+    catch(std::out_of_range e)
+    {
+        WARNING("BezierPatch_Manager - updateDependency: patch wasn't found");
+    }
 }
 
 void BezierPatch_Manager::allocateScene()
@@ -198,12 +226,12 @@ BezierPatch *BezierPatch_Manager::operator[](unsigned int i)
 
 void BezierPatch_Manager::setPatch(unsigned int index, BezierPatch* patch)
 {
-    m_patchs[index]=patch;
+    m_patchs.at(index)=patch;
 }
 
 BezierPatch* BezierPatch_Manager::getPatch(unsigned int index)
 {
-    return m_patchs[index];
+    return m_patchs.at(index);
 }
 
 //////////////////////PRIV.SLOT////////////////////////////

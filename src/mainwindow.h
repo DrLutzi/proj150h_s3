@@ -7,6 +7,7 @@
 #include "viewer.h"
 #include "widget_patchitem.h"
 #include "dialog_newpatch.h"
+#include "widget_rectanglepatchwidget.h"
 
 namespace Ui {
 class MainWindow;
@@ -20,7 +21,11 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+    void addBezierPatch2List(BezierPatch *bp);
+
     void notifyNewPatchFromDialogNewPatch(BezierPatch *bp);
+    void notifyClickedFromRectanglePatchWidget();
+    void notifyClickedUpdateFromRectanglePatchWidget();
 
 private slots:
     void on_pushbutton_gen_clicked();
@@ -49,6 +54,7 @@ private:
     Dialog_newPatch *m_dialogNewPatch;
 
     BezierPatch *m_selectedPatch;
+    Widget_specificPatchWidget *m_specificPatchWidget;
 };
 
 #endif // MAINWINDOW_H

@@ -31,7 +31,7 @@ const glm::vec3 &BezierPatch_Tetrahedron::getPoint(size_t i, size_t j, size_t k,
 {
     if(i+j+k+l!=m_size-1)
         ERROR("BezierPatch_Tetrahedron : the quadruplet (i,j,k,l) is not a valid coordinate");
-    return m_points[indexOf(j,k,l)];
+    return BezierPatch::getPoint(indexOf(j,k,l));
 }
 
 //set
@@ -40,7 +40,7 @@ void BezierPatch_Tetrahedron::setPoint(size_t i, size_t j, size_t k, size_t l, c
 {
     if(i+j+k+l!=m_size-1)
         ERROR("BezierPatch_Tetrahedron : the quadruplet (i,j,k,l) is not a valid coordinate");
-    m_points[indexOf(j,k,l)]=cp;
+    BezierPatch::setPoint(indexOf(j,k,l), cp);
 }
 
 void BezierPatch_Tetrahedron::makePatchEBO()
@@ -340,18 +340,13 @@ const glm::vec3 &BezierPatch_Tetrahedron::casteljau(float u, float v, float w, f
 
 glm::vec3 &BezierPatch_Tetrahedron::getTmpCasteljau(size_t i, size_t j, size_t k, size_t l)
 {
-    return m_tmpCasteljau[accessValue(k, l)+j];
+    return m_tmpCasteljau[indexOf(j, k, l)];
 }
 
 size_t BezierPatch_Tetrahedron::indexOf(size_t j, size_t k, size_t l) const
 {
-    return accessValue(k, l)+j;
-}
-
-unsigned int BezierPatch_Tetrahedron::accessValue(unsigned int k, unsigned int l) const
-{
     //When making a function to access a simple vector using 4 values, we can first test what it is to try it using 3, then 2.
-    //In a Bezier tetrahedron, one of the variables is useless.
+    //In a Bezier tetrahedron, one of the variables is useless, so that leaves us with only 3 to choose from.
     //In Bezier Triangles, we showed what it was like to use 2 variables to access a vector.
     //By dividing the tetrahedron patch as a set of triangles, we can access the Bezier Tetrahedron CPs by
     //multiplying the number of points in the triangle by value by the last coordinate.
@@ -359,9 +354,9 @@ unsigned int BezierPatch_Tetrahedron::accessValue(unsigned int k, unsigned int l
     //and the size of the triangles behind the front triangle (l=0) decreases for each l value >0. We had to perform the expansion of a sum of a sum dependant on
     //the first sum parameter on MATLAB to find a more convenient way to access the tetrahedron than iterating everytime to compute the sum.
 
-    //We also use mc_constValue, which pre-computed a part of the equation which is only dependant on the size of the patch.
-    unsigned int lDepth = l!=0 ? (l*(l*(l - 3*(m_size+1)) + mc_constValue))/6 : 0;
+    //We also use mc_constValue, a value which is a pre-computed part of the equation which is only dependant on the size of the patch.
+    size_t lDepth = l!=0 ? (l*(l*(l - 3*(m_size+1)) + mc_constValue))/6 : 0;
 
-    unsigned int kHeight = k!=0 ? (m_size-l)*k - (k*(k-1))/2 : 0;
-    return lDepth+kHeight;
+    size_t kHeight = k!=0 ? (m_size-l)*k - (k*(k-1))/2 : 0;
+    return lDepth+kHeight + j;
 }

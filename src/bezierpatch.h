@@ -67,6 +67,8 @@ public:
     inline const QString& name() const {return m_name;}
     inline void setName(const QString& name) {m_name=name;}
 
+    //VBO/EBO informations
+
     /**
      * @brief computes the size of the VBO generated for the GPU, in bytes.
      */
@@ -84,6 +86,10 @@ public:
      */
     inline virtual size_t getNumberOfPointsPatch() const {return m_points.size();}
     inline virtual size_t getNumberOfPointsSurface() const {return m_surface.size();}
+
+    //base setpoint, getpoint
+    inline void setPoint(size_t i, const glm::vec3& CP){m_points[i]=CP; notifyPatchChanged();}
+    inline const glm::vec3& getPoint(size_t i) const {return m_points[i];}
 
     //operations
 
@@ -130,6 +136,10 @@ public:
 
     void updateVBOPatch(GLint vboId, GLint eboId);
     void updateVBOSurface(GLint vboId, GLint eboId);
+
+    //static
+
+    inline static unsigned int currentId(){return ms_currentId;}
 
 protected:
 
@@ -208,20 +218,5 @@ protected:
 
     static unsigned int         ms_currentId;
 };
-
-/*
-
-Le patch est construit selon les indices suivants :
-
-0,0 --------> j = N-1
-  |
-  |
-  |
-  v
-i = M-1
-
-VBOData permet au GPU de construire rapidement le patch, colonnes par colonnes puis lignes par lignes.
-
-*/
 
 #endif // BEZIERPATCH_H

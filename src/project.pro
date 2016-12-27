@@ -65,7 +65,10 @@ SOURCES += main.cpp \
     bezierpatch_hexaedron.cpp \
     mainwindow.cpp \
     widget_patchitem.cpp \
-    dialog_newpatch.cpp
+    dialog_newpatch.cpp \
+    patchdependencysolver.cpp \
+    widget_specificpatchwidget.cpp \
+    widget_rectanglepatchwidget.cpp
 
 HEADERS  += viewer.h \
         ShaderProgram.h \
@@ -82,7 +85,10 @@ HEADERS  += viewer.h \
     mainwindow.h \
     widget_patchitem.h \
     dialog_newpatch.h \
-    errorsHandler.hpp
+    errorsHandler.hpp \
+    patchdependencysolver.h \
+    widget_specificpatchwidget.h \
+    widget_rectanglepatchwidget.h
 
 OTHER_FILES += \
     simpleShader.vert \
@@ -93,4 +99,5 @@ OTHER_FILES += \
 FORMS += \
     mainwindow.ui \
     widget_patchitem.ui \
-    dialog_newpatch.ui
+    dialog_newpatch.ui \
+    widget_rectanglepatchwidget.ui

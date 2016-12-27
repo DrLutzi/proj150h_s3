@@ -326,6 +326,9 @@
          </layout>
         </item>
         <item>
+         <layout class="QVBoxLayout" name="specificPatchWidget_layout"/>
+        </item>
+        <item>
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>

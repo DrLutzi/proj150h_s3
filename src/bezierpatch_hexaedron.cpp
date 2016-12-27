@@ -25,14 +25,14 @@ BezierPatch_Hexaedron::~BezierPatch_Hexaedron()
 
 const glm::vec3 &BezierPatch_Hexaedron::getPoint(size_t i, size_t j, size_t k) const
 {
-    return m_points[indexOf(i,j,k)];
+    return BezierPatch::getPoint(indexOf(i,j,k));
 }
 
 //set
 
 void BezierPatch_Hexaedron::setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp)
 {
-    m_points[indexOf(i,j,k)]=cp;
+    BezierPatch::setPoint(indexOf(i,j,k),cp);
 }
 
 void BezierPatch_Hexaedron::makePatchEBO()

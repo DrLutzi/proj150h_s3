@@ -7,7 +7,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow),
     m_viewer(),
     m_dialogNewPatch(),
-    m_selectedPatch(NULL)
+    m_selectedPatch(NULL),
+    m_specificPatchWidget(new Widget_specificPatchWidget(this))
 {
     ui->setupUi(this);
 
@@ -15,14 +16,32 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->viewer_layout->addWidget(m_viewer);
 
+    ui->specificPatchWidget_layout->addWidget(m_specificPatchWidget);
+
     m_dialogNewPatch = new Dialog_newPatch(this);
 }
 
 MainWindow::~MainWindow()
 {
+    ui->specificPatchWidget_layout->removeWidget(m_specificPatchWidget);
+    delete m_specificPatchWidget;
     delete ui;
     delete m_viewer;
 }
+
+void MainWindow::addBezierPatch2List(BezierPatch *bp)
+{
+    if(bp!=NULL)
+    {
+        QListWidgetItem *item = new QListWidgetItem(ui->listWidget_Patchs);
+        Widget_PatchItem *wpi = new Widget_PatchItem(bp);
+        item->setSizeHint(QSize(0, wpi->height()));
+        ui->listWidget_Patchs->setItemWidget(item, wpi);
+        ui->listWidget_Patchs->addItem(item);
+    }
+}
+
+//NOTIFICATIONS
 
 void MainWindow::notifyNewPatchFromDialogNewPatch(BezierPatch *bp)
 {
@@ -35,13 +54,37 @@ void MainWindow::notifyNewPatchFromDialogNewPatch(BezierPatch *bp)
         m_viewer->manager()->remakeScene();
         m_viewer->updateGL();
 
-        QListWidgetItem *item = new QListWidgetItem(ui->listWidget_Patchs);
-        Widget_PatchItem *wpi = new Widget_PatchItem(bp);
-        item->setSizeHint(QSize(0, wpi->height()));
-        ui->listWidget_Patchs->setItemWidget(item, wpi);
-        ui->listWidget_Patchs->addItem(item);
+        addBezierPatch2List(bp);
     }
 }
+
+void MainWindow::notifyClickedFromRectanglePatchWidget()
+{
+    BezierPatch_Rectangle *rectangle=dynamic_cast<BezierPatch_Rectangle*>(m_selectedPatch);
+    if(rectangle==NULL)
+    {
+        WARNING("notifyClickedFromRectanglePatchWidget: selected patch is not a rectangle");
+    }
+    else
+    {
+        unsigned int id=rectangle->id();
+        m_viewer->manager()->addDependency(id).createR2TDependency(id);
+
+        //the architecture doesn't allow us to directly append the triangles to the list,
+        //so we have to do some trickery
+        id=BezierPatch::currentId()-2;
+
+        addBezierPatch2List(m_viewer->manager()->getPatch(id++));
+        addBezierPatch2List(m_viewer->manager()->getPatch(id));
+    }
+}
+
+void MainWindow::notifyClickedUpdateFromRectanglePatchWidget()
+{
+
+}
+
+//PRIVATE SLOTS
 
 void MainWindow::on_pushbutton_gen_clicked()
 {
@@ -59,6 +102,8 @@ void MainWindow::on_listWidget_Patchs_itemSelectionChanged()
 
         if(m_selectedPatch!=NULL)
         {
+            //set UI according to manager
+
             ui->checkBox_display_CP->setChecked             (m_selectedPatch->isDrawCP());
             ui->checkBox_display_patchLines->setChecked     (m_selectedPatch->isDrawPatch());
             ui->checkBox_display_surface->setChecked        (m_selectedPatch->isDrawSurface());
@@ -71,9 +116,25 @@ void MainWindow::on_listWidget_Patchs_itemSelectionChanged()
             ui->pushButton_color_CP->setPalette         (QPalette(color_CP));
             ui->pushButton_color_patchLines->setPalette (QPalette(color_patchLines));
             ui->pushButton_color_surface->setPalette    (QPalette(color_surface));
+
+            //set the bezierpatch type-dependant UI
+
+            auto deleteSpecificWidget=[&]()
+            {
+                ui->specificPatchWidget_layout->removeWidget(m_specificPatchWidget);
+                delete m_specificPatchWidget;
+            };
+
+            if(dynamic_cast<BezierPatch_Rectangle*>(m_selectedPatch))
+            {
+                deleteSpecificWidget();
+                m_specificPatchWidget=new Widget_RectanglePatchWidget(this);
+                ui->specificPatchWidget_layout->addWidget(m_specificPatchWidget);
+                m_specificPatchWidget->show();
+            }
         }
         else
-            WARNING("on_listWidget_Patchs_itemSelectionChanged : patch should be found inside manager");
+            WARNING("on_listWidget_Patchs_itemSelectionChanged : patch should have been found inside manager");
     }
 }
 
@@ -166,7 +227,6 @@ void MainWindow::on_pushButton_remove_clicked()
     if(m_selectedPatch!=NULL)
     {
         m_viewer->manager()->remove(m_selectedPatch->id());
-        m_viewer->manager()->remakeScene();
         delete m_selectedPatch;
         m_selectedPatch=NULL;
 

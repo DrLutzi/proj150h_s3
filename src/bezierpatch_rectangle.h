@@ -50,6 +50,19 @@ private:
     size_t m_sizeN;
 
     std::vector<glm::vec3> m_tmpCasteljau;
+
+    /*
+
+    The patch is constructed following this nice ascii blueprint:
+
+    0,0 --------> j = N-1
+      |
+      |
+      |
+      v
+    i = M-1
+
+    */
 };
 
 #endif // BEZIERPATCH_RECTANGLE_H

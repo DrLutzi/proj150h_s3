@@ -47,13 +47,11 @@ protected:
 private:
 
     /**
-     * @brief calculates \sum_{j=0}^{l}(n-j)(n+1-j)/2 + \sum_{i=0}^{k}((n-l)-i) for any (k,l)>(0,0). n is m_size.
+     * @brief calculates \sum_{j=0}^{l}(n-j)(n+1-j)/2 + \sum_{i=0}^{k}((n-l)-i) + j for any (j,k,l)>(-1,0,0). n is m_size.
      * This is used to access the vector m_points.
      * a similar function is used for BezierPatch_Triangle because
      * we decided not to fully expand the expression used to access the set of control points.
      */
-    unsigned int accessValue(unsigned int k, unsigned int l) const;
-
     inline size_t indexOf(size_t j, size_t k, size_t l) const;
 
     size_t m_size;
@@ -63,6 +61,21 @@ private:
     ///This is used as a mean to reduce the number of calculations
     size_t mc_constValue;
 
+    /*
+
+    The patch is constructed following this nice 3D ascii blueprint:
+
+      (0,0,n-1,0)
+          /|\
+         / | \
+        /  |  \
+       /   |*  \      * (0,0,0,n-1) (back)
+      /  _/ \_  \
+     / _/     \_ \
+     _/_________\_ (0,n-1,0,0)
+(n-1,0,0,0)
+
+    */
 };
 
 #endif // BEZIERPATCH_THETRAEDRON_H

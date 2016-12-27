@@ -22,7 +22,7 @@ BezierPatch_Rectangle::~BezierPatch_Rectangle()
 
 const glm::vec3 &BezierPatch_Rectangle::getPoint(size_t i, size_t j) const
 {
-    return m_points[i*m_sizeN+j];
+    return BezierPatch::getPoint(i*m_sizeN+j);
 }
 
 size_t BezierPatch_Rectangle::sizeM() const
@@ -39,8 +39,7 @@ size_t BezierPatch_Rectangle::sizeN() const
 
 void BezierPatch_Rectangle::setPoint(size_t i, size_t j, const glm::vec3 &cp)
 {
-    m_points[i*m_sizeN+j]=cp;
-    notifyPatchChanged();
+    BezierPatch::setPoint(i*m_sizeN+j, cp);
 }
 
 

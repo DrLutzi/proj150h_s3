@@ -87,33 +87,6 @@ BezierPatch_Manager *Viewer::manager()
     return m_manager;
 }
 
-void Viewer::rectangularPatch2UpperTrianglePatch()
-{
-    BezierPatch_Triangle *upperT = new BezierPatch_Triangle;
-    BezierPatch_Triangle *lowerT = new BezierPatch_Triangle;
-
-    RPatch2TPatchSolver solver;
-
-/*    (*upperT)=solver.solveFrom((*m_examplePatch), RPatch2TPatchSolver::Solver_LowerTriangle);
-    (*lowerT)=solver.solveFrom((*m_examplePatch), RPatch2TPatchSolver::Solver_UpperTriangle); */
-
-    upperT->setResolution(40);
-    upperT->showPatch();
-    upperT->setPatchColor(glm::vec4(0.7, 0.5, 0.5, 1.0));
-    upperT->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
-    upperT->setSurfaceColor(glm::vec4(0.7, 0.2, 0.2, 1.0));
-
-    lowerT->setResolution(40);
-    lowerT->showPatch();
-    lowerT->setPatchColor(glm::vec4(0.5, 0.7, 0.5, 1.0));
-    lowerT->setControlPointColor(glm::vec4(0.9, 0.2, 0.2, 1.0));
-    lowerT->setSurfaceColor(glm::vec4(0.2, 0.7, 0.2, 1.0));
-
-    m_manager->append(upperT, false);
-    m_manager->append(lowerT, true);
-    return;
-}
-
 void Viewer::draw()
 {
     // recupere les matrices depuis l'interface

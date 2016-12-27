@@ -5,7 +5,8 @@
 #include "bezierpatch_triangle.h"
 #include "bezierpatch_tetrahedron.h"
 #include "bezierpatch_hexaedron.h"
-#include "rpatch2tpatchsolver.h"
+#include "errorsHandler.hpp"
+#include "patchdependencysolver.h"
 #include <QTimer>
 
 class BezierPatch_Manager : public QObject
@@ -39,10 +40,22 @@ public:
 
     /**
      * @brief removes a patch from the manager and returns it (often for deletion).
-     * @param position iterator's position where a patch should be removed, or its id.
+     * @param id id of the patch to be removed
      */
-    BezierPatch *remove(iterator position);
     BezierPatch *remove(unsigned int id);
+
+    /**
+     * @brief addDependency adds a dependency to a patch.
+     * @param id id of the patch.
+     * @return reference to the created dependency
+     */
+    PatchDependencySolver &addDependency(unsigned int id);
+
+    /**
+     * @brief addDependency updates the dependency of a patch.
+     * @param id id of the patch.
+     */
+    void updateDependency(unsigned int id);
 
     /**
      * @brief allocate the memory necessary to transfer class datas to VBO datas, done by remakeScene().
@@ -92,7 +105,8 @@ private:
     void allocateEBO();
 
     /// A vector of patches to be managed
-    std::map<unsigned int, BezierPatch*>       m_patchs;
+    std::map<unsigned int, BezierPatch*>                m_patchs;
+    std::map<unsigned int, PatchDependencySolver>      m_dependencies;
 
     /// OpenGL objects
     GLint                           m_VAOId;

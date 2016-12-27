@@ -24,7 +24,7 @@ const glm::vec3 &BezierPatch_Triangle::getPoint(size_t i, size_t j, size_t k) co
 {
     if(i+j+k!=m_size-1)
         ERROR("BezierPatch_Triangle : the triplet (i,j,k) is not a valid coordinate");
-    return m_points[accessValue(k)+j];
+    return BezierPatch::getPoint(indexOf(k)+j);
 }
 
 size_t BezierPatch_Triangle::size() const
@@ -38,9 +38,7 @@ void BezierPatch_Triangle::setPoint(size_t i, size_t j, size_t k, const glm::vec
 {
     if(i+j+k!=m_size-1)
         ERROR("BezierPatch_Triangle : the triplet (i,j,k) is not a valid coordinate");
-    m_points[accessValue(k)+j]=cp;
-
-    notifyPatchChanged();
+    BezierPatch::setPoint(indexOf(k)+j, cp);
 }
 
 void BezierPatch_Triangle::makePatchEBO()
@@ -56,9 +54,9 @@ void BezierPatch_Triangle::makePatchEBO()
         for(size_t j=0; j<size()-k-1; ++j) //also read "from left to right"
         {
             //the point iterated, his right neighbor, and top neighbor
-            m_EBOPoints[eboIndex++]=accessValue(k)+j;
-            m_EBOPoints[eboIndex++]=accessValue(k)+j+1;
-            m_EBOPoints[eboIndex++]=accessValue(k+1)+j;
+            m_EBOPoints[eboIndex++]=indexOf(k)+j;
+            m_EBOPoints[eboIndex++]=indexOf(k)+j+1;
+            m_EBOPoints[eboIndex++]=indexOf(k+1)+j;
         }
     }
 }
@@ -211,12 +209,12 @@ const glm::vec3 &BezierPatch_Triangle::casteljau(float u, float v, float w)
 
 glm::vec3 &BezierPatch_Triangle::getTmpCasteljau(size_t i, size_t j, size_t k)
 {
-    return m_tmpCasteljau[accessValue(k)+j];
+    return m_tmpCasteljau[indexOf(k)+j];
 }
 
 //////////////////////PRIVATE////////////////////////////
 
-unsigned int BezierPatch_Triangle::accessValue(unsigned int k) const
+unsigned int BezierPatch_Triangle::indexOf(unsigned int k) const
 {
     return k!=0 ? m_size*k - (k*(k-1))/2 : 0;
 }

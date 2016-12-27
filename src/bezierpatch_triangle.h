@@ -50,11 +50,27 @@ private:
      * @brief calculates \sum_{i=0}^{k}(n-i) for any k>0 and 0 for k=0. n is m_size.
      * This is used to access the vector m_points.
      */
-    unsigned int accessValue(unsigned int k) const;
+    unsigned int indexOf(unsigned int k) const;
 
     size_t m_size;
 
     std::vector<glm::vec3> m_tmpCasteljau;
+
+    /*
+
+    The patch is constructed following this nice ascii blueprint:
+
+       (0,0,n-1)
+          /\
+         /  \
+        /    \
+       /      \
+      /        \
+     /          \
+    _____________ (0,n-1,0)
+ (n-1,0,0)
+
+    */
 };
 
 #endif // BEZIERPATCH_TRIANGLE_H
