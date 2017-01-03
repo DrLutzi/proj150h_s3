@@ -23,9 +23,92 @@ BezierPatch_Hexaedron::~BezierPatch_Hexaedron()
 
 //get
 
+std::pair<size_t, size_t> BezierPatch_Hexaedron::sizeFace(Face_t face) const
+{
+    std::pair<size_t, size_t> size;
+    switch(face)
+    {
+    case FRONT:
+        size.first=sizeM();
+        size.second=sizeN();
+        break;
+
+    case BACK:
+        size.first=sizeM();
+        size.second=sizeN();
+        break;
+
+    case LEFT:
+        size.first=sizeM();
+        size.second=sizeP();
+        break;
+
+    case RIGHT:
+        size.first=sizeM();
+        size.second=sizeP();
+        break;
+
+    case TOP:
+        size.first=sizeP();
+        size.second=sizeN();
+        break;
+
+    case BOTTOM:
+        size.first=sizeP();
+        size.second=sizeN();
+    }
+
+    return size;
+}
+
 const glm::vec3 &BezierPatch_Hexaedron::getPoint(size_t i, size_t j, size_t k) const
 {
     return BezierPatch::getPoint(indexOf(i,j,k));
+}
+
+const glm::vec3 &BezierPatch_Hexaedron::getPoint(size_t i, size_t j, Face_t face) const
+{
+    size_t i2, j2, k2;
+    switch(face)
+    {
+    case FRONT:
+        i2=i;
+        j2=j;
+        k2=0;
+        break;
+
+    case BACK:
+        i2=i;
+        j2=sizeN()-j-1;
+        k2=sizeP()-1;
+        break;
+
+    case LEFT:
+        i2=i;
+        j2=0;
+        k2=sizeP()-j-1;
+        break;
+
+    case RIGHT:
+        i2=i;
+        j2=sizeN()-1;
+        k2=j;
+        break;
+
+    case TOP:
+        i2=0;
+        j2=j;
+        k2=i;
+        break;
+
+    case BOTTOM:
+        i2=sizeM()-1;
+        j2=j;
+        k2=sizeP()-i-1;
+        break;
+    }
+
+    return getPoint(i2, j2, k2);
 }
 
 //set
@@ -33,6 +116,12 @@ const glm::vec3 &BezierPatch_Hexaedron::getPoint(size_t i, size_t j, size_t k) c
 void BezierPatch_Hexaedron::setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp)
 {
     BezierPatch::setPoint(indexOf(i,j,k),cp);
+}
+
+void BezierPatch_Hexaedron::setPoint(size_t i, size_t j, Face_t face, const glm::vec3& cp)
+{
+    glm::vec3& point=const_cast<glm::vec3&>(getPoint(i,j,face));
+    point = cp;
 }
 
 void BezierPatch_Hexaedron::makePatchEBO()
@@ -76,19 +165,19 @@ void BezierPatch_Hexaedron::makePatchEBO()
     k=sizeP()-1;
     fillEBO(i,j,sizeM(),sizeN());
 
-    //Step 3: j=0 (upper face)
+    //Step 3: j=0 (left face)
     j=0;
     fillEBO(i,k,sizeM(),sizeP());
 
-    //Step 4: j=N (lower face)
+    //Step 4: j=N (right face)
     j=sizeN()-1;
     fillEBO(i,k,sizeM(),sizeP());
 
-    //Step 5: i=0 (left face)
+    //Step 5: i=0 (top face)
     i=0;
     fillEBO(j,k,sizeN(),sizeP());
 
-    //Step 6: i=M (right face)
+    //Step 6: i=M (bottom face)
     i=sizeM()-1;
     fillEBO(j,k,sizeN(),sizeP());
 }
@@ -118,19 +207,19 @@ void BezierPatch_Hexaedron::makeSurfaceVBO()
     k=cappedResolution-1;
     fillVBO(i,j);
 
-    //Step 3: j=0 (upper face)
+    //Step 3: j=0 (left face)
     j=0;
     fillVBO(i,k);
 
-    //Step 4: j=N (lower face)
+    //Step 4: j=N (right face)
     j=cappedResolution-1;
     fillVBO(i,k);
 
-    //Step 5: i=0 (left face)
+    //Step 5: i=0 (top face)
     i=0;
     fillVBO(j,k);
 
-    //Step 6: i=M (right face)
+    //Step 6: i=M (bottom face)
     i=cappedResolution-1;
     fillVBO(j,k);
 }
@@ -166,19 +255,19 @@ void BezierPatch_Hexaedron::makeSurfaceEBO()
     k=cappedResolution-1;
     fillEBO(i,j);
 
-    //Step 3: j=0 (upper face)
+    //Step 3: j=0 (left face)
     j=0;
     fillEBO(i,k);
 
-    //Step 4: j=N (lower face)
+    //Step 4: j=N (right face)
     j=cappedResolution-1;
     fillEBO(i,k);
 
-    //Step 5: i=0 (left face)
+    //Step 5: i=0 (top face)
     i=0;
     fillEBO(j,k);
 
-    //Step 6: i=M (right face)
+    //Step 6: i=M (bottom face)
     i=cappedResolution-1;
     fillEBO(j,k);
 }

@@ -68,20 +68,60 @@ void MainWindow::notifyClickedFromRectanglePatchWidget()
     else
     {
         unsigned int id=rectangle->id();
-        m_viewer->manager()->addDependency(id).createR2TDependency(id);
 
-        //the architecture doesn't allow us to directly append the triangles to the list,
-        //so we have to do some trickery
-        id=BezierPatch::currentId()-2;
+        if(m_viewer->manager()->addDependency(id).createR2TDependency(id))
+        {
+            //the architecture doesn't allow us to directly append the triangles to the list,
+            //so we have to do some trickery
+            id=BezierPatch::currentId()-2;
 
-        addBezierPatch2List(m_viewer->manager()->getPatch(id++));
-        addBezierPatch2List(m_viewer->manager()->getPatch(id));
+            addBezierPatch2List(m_viewer->manager()->getPatch(id++));
+            addBezierPatch2List(m_viewer->manager()->getPatch(id));
+        }
     }
 }
 
-void MainWindow::notifyClickedUpdateFromRectanglePatchWidget()
+void MainWindow::notifyClickedFromHexaedronPatchWidget(BezierPatch_Hexaedron::Face_t face)
 {
+    BezierPatch_Hexaedron *hexaedron=dynamic_cast<BezierPatch_Hexaedron*>(m_selectedPatch);
+    if(hexaedron==NULL)
+    {
+        WARNING("notifyClickedFromRectanglePatchWidget: selected patch is not a rectangle");
+    }
+    else
+    {
+        unsigned int id=hexaedron->id();
 
+        if(m_viewer->manager()->addDependency(id).createH2TDependency(id, face))
+        {
+            //the architecture doesn't allow us to directly append the triangles to the list,
+            //so we have to do some trickery
+            id=BezierPatch::currentId()-2;
+
+            addBezierPatch2List(m_viewer->manager()->getPatch(id++));
+            addBezierPatch2List(m_viewer->manager()->getPatch(id));
+        }
+    }
+}
+
+void MainWindow::notifyClickedUpdateDependencyFromSpecificPatchWidget()
+{
+    if(m_selectedPatch==NULL)
+    {
+        WARNING("Update dependency: Patch not being selected anymore");
+    }
+    else
+        m_viewer->manager()->updateDependency(m_selectedPatch->id());
+}
+
+void MainWindow::notifyClickedRemoveDependencyFromSpecificPatchWidget()
+{
+    if(m_selectedPatch==NULL)
+    {
+        WARNING("Remove dependency: Patch not being selected anymore");
+    }
+    else
+        m_viewer->manager()->removeDependency(m_selectedPatch->id());
 }
 
 //PRIVATE SLOTS
@@ -119,18 +159,29 @@ void MainWindow::on_listWidget_Patchs_itemSelectionChanged()
 
             //set the bezierpatch type-dependant UI
 
-            auto deleteSpecificWidget=[&]()
+            auto deleteSpecificWidget=[this]()
             {
                 ui->specificPatchWidget_layout->removeWidget(m_specificPatchWidget);
                 delete m_specificPatchWidget;
+            };
+
+            auto showSpecificWidget=[this]()
+            {
+                ui->specificPatchWidget_layout->addWidget(m_specificPatchWidget);
+                m_specificPatchWidget->show();
             };
 
             if(dynamic_cast<BezierPatch_Rectangle*>(m_selectedPatch))
             {
                 deleteSpecificWidget();
                 m_specificPatchWidget=new Widget_RectanglePatchWidget(this);
-                ui->specificPatchWidget_layout->addWidget(m_specificPatchWidget);
-                m_specificPatchWidget->show();
+                showSpecificWidget();
+            }
+            else if(dynamic_cast<BezierPatch_Hexaedron*>(m_selectedPatch))
+            {
+                deleteSpecificWidget();
+                m_specificPatchWidget=new Widget_HexaedronPatchWidget(this);
+                showSpecificWidget();
             }
         }
         else

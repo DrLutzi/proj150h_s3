@@ -3,6 +3,8 @@
 
 #include <QWidget>
 
+class MainWindow;
+
 class Widget_specificPatchWidget : public QWidget
 {
     Q_OBJECT
@@ -12,6 +14,10 @@ public:
 signals:
 
 public slots:
+
+protected:
+
+    MainWindow *m_parent;
 
 };
 

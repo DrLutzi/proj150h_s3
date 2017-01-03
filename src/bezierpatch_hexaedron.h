@@ -6,6 +6,9 @@
 class BezierPatch_Hexaedron : public BezierPatch
 {
 public:
+
+    typedef enum {FRONT, BACK, LEFT, RIGHT, TOP, BOTTOM} Face_t;
+
     BezierPatch_Hexaedron();
 
     BezierPatch_Hexaedron(size_t m, size_t n, size_t p);
@@ -17,11 +20,15 @@ public:
     inline size_t sizeN() const{return m_sizeN;}
     inline size_t sizeP() const{return m_sizeP;}
 
+    std::pair<size_t, size_t> sizeFace(Face_t face) const;
+
     const glm::vec3 &getPoint(size_t i, size_t j, size_t k) const;
+    const glm::vec3 &getPoint(size_t i, size_t j, Face_t face) const;
 
     //set
 
     void setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp);
+    void setPoint(size_t i, size_t j, Face_t face, const glm::vec3& cp);
 
     void makePatchEBO();
     void makeSurfaceVBO();
@@ -33,7 +40,9 @@ public:
 
     //static random generation
 
-    static BezierPatch_Hexaedron* generate(size_t m, size_t n, size_t p, float xStep=1.0f, float yStep=1.0f, float zStep=-1.0f, float max_noise=0.5f);
+    static BezierPatch_Hexaedron* generate(size_t m, size_t n, size_t p,
+                                           float xStep=1.0f, float yStep=1.0f, float zStep=-1.0f, float max_noise=0.5f);
+
 
 protected:
 

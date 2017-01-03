@@ -83,6 +83,15 @@ BezierPatch *BezierPatch_Manager::remove(unsigned int id)
 
 //dependencies
 
+void BezierPatch_Manager::removeDependency(unsigned int id)
+{
+    std::map<unsigned int, PatchDependencySolver>::iterator it=m_dependencies.find(id);
+    if(it!=m_dependencies.end())
+    {
+        m_dependencies.erase(it);
+    }
+}
+
 PatchDependencySolver &BezierPatch_Manager::addDependency(unsigned int id)
 {
      std::map<unsigned int, PatchDependencySolver>::iterator it
@@ -98,7 +107,7 @@ void BezierPatch_Manager::updateDependency(unsigned int id)
     }
     catch(std::out_of_range e)
     {
-        WARNING("BezierPatch_Manager - updateDependency: patch wasn't found");
+        WARNING("BezierPatch_Manager - updateDependency: dependency wasn't found");
     }
 }
 
@@ -190,12 +199,16 @@ bool BezierPatch_Manager::rayIntersectsCP(const glm::vec3& origin, const glm::ve
     {
         BezierPatch* patch=(*it).second;
 
-        //try to connect with a control point (this function also modifies r)
-        glm::vec3 *other=patch->rayIntersectsCP(origin, direction, r, distance);
-        if(other!=NULL)
+        //if the user can see these CPs
+        if(patch->isDrawCP())
         {
-            m_selectedCP=other;
-            m_selectedPatch=patch;
+            //try to connect with a control point (this function also modifies r)
+            glm::vec3 *other=patch->rayIntersectsCP(origin, direction, r, distance);
+            if(other!=NULL)
+            {
+                m_selectedCP=other;
+                m_selectedPatch=patch;
+            }
         }
     }
     return m_selectedCP!=NULL;

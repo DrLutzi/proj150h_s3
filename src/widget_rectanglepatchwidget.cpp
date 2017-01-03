@@ -1,16 +1,11 @@
 #include "widget_rectanglepatchwidget.h"
 #include "ui_widget_rectanglepatchwidget.h"
 #include "mainwindow.h"
-#include "errorsHandler.hpp"
 
 Widget_RectanglePatchWidget::Widget_RectanglePatchWidget(QWidget *parent) :
     Widget_specificPatchWidget(parent),
-    ui(new Ui::Widget_RectanglePatchWidget),
-    m_parent(NULL)
+    ui(new Ui::Widget_RectanglePatchWidget)
 {
-    if((m_parent=qobject_cast<MainWindow*>(parent)) == NULL)
-        ERROR("Widget_RectanglePatchWidget: parent must be of type mainwindow");
-
     ui->setupUi(this);
 }
 
@@ -27,6 +22,12 @@ void Widget_RectanglePatchWidget::on_pushButton_clicked()
 
 void Widget_RectanglePatchWidget::on_pushButton_update_clicked()
 {
-    m_parent->notifyClickedUpdateFromRectanglePatchWidget();
+    m_parent->notifyClickedUpdateDependencyFromSpecificPatchWidget();
+    return;
+}
+
+void Widget_RectanglePatchWidget::on_pushButton_remove_clicked()
+{
+    m_parent->notifyClickedRemoveDependencyFromSpecificPatchWidget();
     return;
 }

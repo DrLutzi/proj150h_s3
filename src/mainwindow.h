@@ -8,6 +8,7 @@
 #include "widget_patchitem.h"
 #include "dialog_newpatch.h"
 #include "widget_rectanglepatchwidget.h"
+#include "widget_hexaedronpatchwidget.h"
 
 namespace Ui {
 class MainWindow;
@@ -23,9 +24,15 @@ public:
 
     void addBezierPatch2List(BezierPatch *bp);
 
+    //notifications from child widgets
+
     void notifyNewPatchFromDialogNewPatch(BezierPatch *bp);
     void notifyClickedFromRectanglePatchWidget();
-    void notifyClickedUpdateFromRectanglePatchWidget();
+
+    void notifyClickedFromHexaedronPatchWidget(BezierPatch_Hexaedron::Face_t face);
+
+    void notifyClickedUpdateDependencyFromSpecificPatchWidget();
+    void notifyClickedRemoveDependencyFromSpecificPatchWidget();
 
 private slots:
     void on_pushbutton_gen_clicked();

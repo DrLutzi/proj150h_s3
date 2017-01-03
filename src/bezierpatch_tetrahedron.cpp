@@ -283,6 +283,28 @@ BezierPatch_Tetrahedron* BezierPatch_Tetrahedron::generate(size_t n, float xStep
 
 //others
 
+void BezierPatch_Tetrahedron::raising()
+{
+    glm::vec3 origin_plusI, origin_plusJ,origin_plusK;
+    //start from above the bottom
+    for(size_t k=1; k<size(); ++k)
+        for(size_t l=0; l<size()-k; ++l)
+            for(size_t j=0; j<size()-k-l; ++j)
+            {
+                //the normal un-normalized of the face + the mid point of the face will do the job
+                size_t i=size()-1-k-l-j;
+
+                origin_plusI=getPoint(i+1, j, k-1, l);
+                origin_plusJ = getPoint(i, j+1, k-1, l);
+                origin_plusK = getPoint(i, j,   k-1, l+1);
+
+                glm::vec3 n = glm::cross(origin_plusJ-origin_plusI,
+                                         origin_plusK-origin_plusI);
+                glm::vec3 mid=(origin_plusI + origin_plusJ + origin_plusK)/3.0f;
+                setPoint(i,j,k,l, mid+n);
+            }
+}
+
 void BezierPatch_Tetrahedron::drawPatch() const
 {
     if(!m_drawPatch)

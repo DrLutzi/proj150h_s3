@@ -45,6 +45,12 @@ public:
     BezierPatch *remove(unsigned int id);
 
     /**
+     * @brief removeDependency remove a dependency between patches.
+     * @param id id of the patch.
+     */
+    void removeDependency(unsigned int id);
+
+    /**
      * @brief addDependency adds a dependency to a patch.
      * @param id id of the patch.
      * @return reference to the created dependency
@@ -105,7 +111,7 @@ private:
     void allocateEBO();
 
     /// A vector of patches to be managed
-    std::map<unsigned int, BezierPatch*>                m_patchs;
+    std::map<unsigned int, BezierPatch*>               m_patchs;
     std::map<unsigned int, PatchDependencySolver>      m_dependencies;
 
     /// OpenGL objects

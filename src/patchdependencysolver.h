@@ -31,9 +31,10 @@ public:
     /**
      * @brief createH2TDependency creates a hexaedron -> 2 tetrahedrons dependency relation
      * @param id id of the hexaedron patch inside the manager
+     * @param face face of the hexaedron we want to set a dependency to
      * @return true if the dependency was correctly created
      */
-    bool createH2TDependency(unsigned int id);
+    bool createH2TDependency(unsigned int id, BezierPatch_Hexaedron::Face_t face);
 
     /**
      * @brief updateDependency updates the child patches with the current dependency set
@@ -41,6 +42,11 @@ public:
     void updateDependency();
 
 private:
+
+    /**
+     * @brief copies some of the content of parent into ch1 and ch2.
+     */
+    void copyParent(BezierPatch *parent, BezierPatch *ch1, BezierPatch *ch2);
 
     /**
      * @brief indexOf returns a single index to access the vector like a matrix using j1 and j2.
@@ -59,6 +65,12 @@ private:
      * @brief m_dependencyType what type of dependency the instance holds
      */
     dependency_t            m_dependencyType;
+
+    /**
+     * @brief m_patchInfos adds infos for the parent patch dependency
+     * (only needed for knowing the hexaedron face yet)
+     */
+    BezierPatch_Hexaedron::Face_t   m_parentPatchInfos;
 
     /**
      * @brief m_manager a link to the program's bezier patch manager

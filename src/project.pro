@@ -58,7 +58,6 @@ SOURCES += main.cpp \
     ShaderProgramBezier.cpp \
     bezierpatch_rectangle.cpp \
     bezierpatch_triangle.cpp \
-    rpatch2tpatchsolver.cpp \
     productpolynom3var.cpp \
     bezierpatch_manager.cpp \
     bezierpatch_tetrahedron.cpp \
@@ -68,7 +67,8 @@ SOURCES += main.cpp \
     dialog_newpatch.cpp \
     patchdependencysolver.cpp \
     widget_specificpatchwidget.cpp \
-    widget_rectanglepatchwidget.cpp
+    widget_rectanglepatchwidget.cpp \
+    widget_hexaedronpatchwidget.cpp
 
 HEADERS  += viewer.h \
         ShaderProgram.h \
@@ -77,7 +77,6 @@ HEADERS  += viewer.h \
     ShaderProgramBezier.h \
     bezierpatch_rectangle.h \
     bezierpatch_triangle.h \
-    rpatch2tpatchsolver.h \
     productpolynom3var.h \
     bezierpatch_manager.h \
     bezierpatch_tetrahedron.h \
@@ -88,7 +87,8 @@ HEADERS  += viewer.h \
     errorsHandler.hpp \
     patchdependencysolver.h \
     widget_specificpatchwidget.h \
-    widget_rectanglepatchwidget.h
+    widget_rectanglepatchwidget.h \
+    widget_hexaedronpatchwidget.h
 
 OTHER_FILES += \
     simpleShader.vert \
@@ -100,4 +100,5 @@ FORMS += \
     mainwindow.ui \
     widget_patchitem.ui \
     dialog_newpatch.ui \
-    widget_rectanglepatchwidget.ui
+    widget_rectanglepatchwidget.ui \
+    widget_hexaedronpatchwidget.ui
