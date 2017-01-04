@@ -59,7 +59,9 @@ private:
     size_t m_sizeM;
     size_t m_sizeN;
 
-    typedef enum {NO_DEPENDENCY, R2T, H2T} dependency_t;
+    ///R2T = rectangle and 2 triangles
+    ///H2TT = hexaedron and 2 tetrahedrons
+    typedef enum {NO_DEPENDENCY, R2T, H2TT} dependency_t;
 
     /**
      * @brief m_dependencyType what type of dependency the instance holds

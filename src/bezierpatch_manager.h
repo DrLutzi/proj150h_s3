@@ -7,14 +7,14 @@
 #include "bezierpatch_hexaedron.h"
 #include "errorsHandler.hpp"
 #include "patchdependencysolver.h"
-#include <QTimer>
 
-class BezierPatch_Manager : public QObject
+#include <map>
+
+class BezierPatch_Manager
 {
-    Q_OBJECT
 
 public:
-    BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation, QObject *parent=NULL);
+    BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation);
 
     //iterator
 
@@ -26,9 +26,6 @@ public:
 
     iterator end(){return m_patchs.end();}
     const_iterator end() const{return m_patchs.end();}
-
-    void setRefreshRate(unsigned int refreshRate);
-
 
     /**
      * @brief attaches a patch to the manager.
@@ -88,7 +85,15 @@ public:
      */
     void drawScene();
 
-    bool rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float& distance);
+    ///
+    /// \brief rayIntersectsCP computes a best intersection with all the drawn patches, using a shot ray.
+    /// \param origin origin of the ray
+    /// \param direction of the ray
+    /// \param r hitBox of the control points
+    /// \param distance it hit, used to update the CP later on
+    /// \return if an intersection was or not found
+    ///
+    bool rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float &distance);
     void updateSelectedCP(const glm::vec3& newPosition);
     void releaseSelectedCP();
 
@@ -96,11 +101,6 @@ public:
 
     void setPatch(unsigned int index, BezierPatch* patch);
     BezierPatch* getPatch(unsigned int index);
-
-private slots:
-
-    /// slot fired when timer out
-    void update();
 
 private:
 
@@ -129,18 +129,7 @@ private:
     GLsizeiptr                      m_EBOCapacity;
 
     ///Selected CP for
-    glm::vec3                       *m_selectedCP;
-    ///Pointer to the patch that has a selectedCP
-    BezierPatch                     *m_selectedPatch;
-
-    ///A timer to limit the number of times a scene can be updated
-    QTimer                          m_refreshTimer;
-
-    ///refresh rate of the manager
-    unsigned int                    m_refreshRate;
-
-    ///indicates if an update function has been recently called or not
-    bool                            m_waitingUpdate;
+    BezierPatch::RayHit             m_selectionHitProperties;
 };
 
 #endif // BEZIERPATCH_MANAGER_H

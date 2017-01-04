@@ -27,8 +27,8 @@ public:
 
     //set
 
-    void setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp);
-    void setPoint(size_t i, size_t j, Face_t face, const glm::vec3& cp);
+    void setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp, bool sendToVBO=false);
+    void setPoint(size_t i, size_t j, Face_t face, const glm::vec3& cp, bool sendToVBO=false);
 
     void makePatchEBO();
     void makeSurfaceVBO();
@@ -57,7 +57,8 @@ protected:
 
 private:
 
-    inline size_t indexOf(size_t i, size_t j, size_t k) const;
+    size_t indexOf(size_t i, size_t j, size_t k) const;
+    size_t indexOf(size_t i, size_t j, Face_t face) const;
 
     size_t m_sizeM;
     size_t m_sizeN;

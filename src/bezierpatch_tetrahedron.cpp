@@ -36,11 +36,11 @@ const glm::vec3 &BezierPatch_Tetrahedron::getPoint(size_t i, size_t j, size_t k,
 
 //set
 
-void BezierPatch_Tetrahedron::setPoint(size_t i, size_t j, size_t k, size_t l, const glm::vec3& cp)
+void BezierPatch_Tetrahedron::setPoint(size_t i, size_t j, size_t k, size_t l, const glm::vec3& cp, bool sendToVBO)
 {
     if(i+j+k+l!=m_size-1)
         ERROR("BezierPatch_Tetrahedron : the quadruplet (i,j,k,l) is not a valid coordinate");
-    BezierPatch::setPoint(indexOf(j,k,l), cp);
+    BezierPatch::setPoint(indexOf(j,k,l), cp, sendToVBO);
 }
 
 void BezierPatch_Tetrahedron::makePatchEBO()
@@ -49,7 +49,7 @@ void BezierPatch_Tetrahedron::makePatchEBO()
 
     //A similar approach to making a triangle patch, yet, again, 4 times.
     //We are not going to show any of the internal links of the patch.
-    //This might be useful in another context, such as cutting a tetrahedron.
+    //This might be useful in another context, such as cutting a tetrahedron, but we're only manipulating the outter surfaces in this project!
     m_EBOPoints.resize(std::max(  (size_t)0, (( ((size())*(size()-1)) /2 )) * 3 * 4)  );
 
     //remember that one of the coordinates is useless because dependant on the others. We chose i
@@ -171,7 +171,7 @@ void BezierPatch_Tetrahedron::makeSurfaceEBO()
     size_t cappedResolution=std::max(size_t(2), m_resolution);
 
     m_EBOSurface.resize(0);
-    m_EBOSurface.reserve(cappedResolution*cappedResolution*8);
+    m_EBOSurface.reserve(cappedResolution*cappedResolution*10);
 
     //we will only calculate the external surface. More options could be added.
     //To do this, we need to succesfully display the 4 external triangles of the thetraedron surface.
@@ -191,11 +191,21 @@ void BezierPatch_Tetrahedron::makeSurfaceEBO()
                 third=cappedResolution-first-second-1;
                 //the point created, his right neighbor, and top neighbor.
                 //Here we need to be careful with the borders since we can't use the precomputed vector.
-                if(third!=0)
+                if(third>0)
                 {
+                    size_t topVertice=cappedResolution-first+eboIndex;
+
                     m_EBOSurface.push_back(eboIndex);
-                    m_EBOSurface.push_back(cappedResolution-first+eboIndex);
+                    m_EBOSurface.push_back(topVertice);
                     m_EBOSurface.push_back(++eboIndex);
+
+                    if(third>1)
+                    {
+                        //in case we aren't drawing lines we also need to add the reverse triangles
+                        m_EBOSurface.push_back(topVertice);
+                        m_EBOSurface.push_back(eboIndex);
+                        m_EBOSurface.push_back(topVertice+1);
+                    }
                 }
                 else
                     ++eboIndex;
@@ -283,7 +293,7 @@ BezierPatch_Tetrahedron* BezierPatch_Tetrahedron::generate(size_t n, float xStep
 
 //others
 
-void BezierPatch_Tetrahedron::raising()
+void BezierPatch_Tetrahedron::raising(bool invert)
 {
     glm::vec3 origin_plusI, origin_plusJ,origin_plusK;
     //start from above the bottom
@@ -300,6 +310,8 @@ void BezierPatch_Tetrahedron::raising()
 
                 glm::vec3 n = glm::cross(origin_plusJ-origin_plusI,
                                          origin_plusK-origin_plusI);
+                if(invert)
+                    n = -n;
                 glm::vec3 mid=(origin_plusI + origin_plusJ + origin_plusK)/3.0f;
                 setPoint(i,j,k,l, mid+n);
             }
@@ -319,7 +331,7 @@ void BezierPatch_Tetrahedron::drawPatch() const
     for(unsigned int i=0; i<4; ++i)
     glDrawElementsBaseVertex(GL_TRIANGLES, quarterSize, GL_UNSIGNED_INT, (GLvoid*)(m_firstEBO+i*quarterSize*sizeof(unsigned int)), 0+m_baseVertexEBO);
 
-    glPolygonMode(polygonMode[0], polygonMode[1]);
+    glPolygonMode(GL_FRONT_AND_BACK, polygonMode[0]);
 }
 
 void BezierPatch_Tetrahedron::drawSurface() const

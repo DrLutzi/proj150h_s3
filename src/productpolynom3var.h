@@ -30,6 +30,9 @@ public:
     ProductPolynom3Var operator*(const ProductPolynom3Var& other) const;
     ProductPolynom3Var& operator*=(const ProductPolynom3Var& other);
 
+    /// \brief operator += add value to the coefficient
+    inline ProductPolynom3Var& operator+=(double value) {m_coef+=value; return (*this);}
+
     /**
      * @brief product between a polynomial of form a^i1*b^i2*c^i3 and a double
      * ab^2 * 3 = 3 ab^2
@@ -111,6 +114,11 @@ public:
      * @param other represents the other polynomial sum
      */
     Sum_ProductPolynom3Var& operator=(const Sum_ProductPolynom3Var& other);
+
+    ///
+    /// \brief simplify simplifies an expression. Supposes there are no 0abc in the expression.
+    ///
+    void simplify();
 
     /**
      * @brief computes a vector from a remarkable identity (a+b)^n

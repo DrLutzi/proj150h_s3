@@ -34,11 +34,11 @@ size_t BezierPatch_Triangle::size() const
 
 //set
 
-void BezierPatch_Triangle::setPoint(size_t i, size_t j, size_t k, const glm::vec3 &cp)
+void BezierPatch_Triangle::setPoint(size_t i, size_t j, size_t k, const glm::vec3 &cp, bool sendToVBO)
 {
     if(i+j+k!=m_size-1)
         ERROR("BezierPatch_Triangle : the triplet (i,j,k) is not a valid coordinate");
-    BezierPatch::setPoint(indexOf(k)+j, cp);
+    BezierPatch::setPoint(indexOf(k)+j, cp, sendToVBO);
 }
 
 void BezierPatch_Triangle::makePatchEBO()
@@ -87,7 +87,7 @@ void BezierPatch_Triangle::makeSurfaceEBO()
     size_t cappedResolution=std::max(size_t(2), m_resolution);
 
     m_EBOSurface.resize(0);
-    m_EBOSurface.reserve(cappedResolution*cappedResolution*2);
+    m_EBOSurface.reserve(cappedResolution*cappedResolution*4);
 
     //calculate entire VBO, from top to bottom, left to right (because why not?)
     int eboIndex=0;
@@ -97,11 +97,22 @@ void BezierPatch_Triangle::makeSurfaceEBO()
         {
             size_t i=cappedResolution-k-j-1;
             //the point created, his right neighbor, and top neighbor.
-            if(i!=0)
+            if(i>0)
             {
+                size_t topVertice=cappedResolution-k+eboIndex;
+
                 m_EBOSurface.push_back(eboIndex);
-                m_EBOSurface.push_back(cappedResolution-k+eboIndex);
+                m_EBOSurface.push_back(topVertice);
                 m_EBOSurface.push_back(++eboIndex);
+
+                if(i>1)
+                {
+
+                    //in case we aren't drawing lines we also need to add the reverse triangles
+                    m_EBOSurface.push_back(topVertice);
+                    m_EBOSurface.push_back(eboIndex);
+                    m_EBOSurface.push_back(topVertice+1);
+                }
             }
             else
                 ++eboIndex;
@@ -140,6 +151,7 @@ BezierPatch_Triangle* BezierPatch_Triangle::generate(size_t n, float xStep, floa
         for(j=0; j<n-k; ++j)
         {
             i=n-k-j-1;
+            noise=genNoise();
             currentCP.x+=noise;
             bp->setPoint(i,j,k, currentCP);
             noise=genNoise();
@@ -150,7 +162,7 @@ BezierPatch_Triangle* BezierPatch_Triangle::generate(size_t n, float xStep, floa
             currentCP.z+=noise;
         }
         noise=genNoise();
-        currentCP.x=(k)*xStep/2 + noise;
+        currentCP.x=(k+1)*xStep/2 + noise;
         noise=genNoise();
         currentCP.y+=yStep+noise;
     }
@@ -171,7 +183,7 @@ void BezierPatch_Triangle::drawPatch() const
     glGetIntegerv(GL_POLYGON_MODE, polygonMode);
     glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
     glDrawElementsBaseVertex(GL_TRIANGLES, m_EBOPoints.size(), GL_UNSIGNED_INT, (GLvoid*)(m_firstEBO), 0+m_baseVertexEBO);
-    glPolygonMode(polygonMode[0], polygonMode[1]);
+    glPolygonMode(GL_FRONT_AND_BACK, polygonMode[0]);
 }
 
 void BezierPatch_Triangle::drawSurface() const

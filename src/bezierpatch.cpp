@@ -3,6 +3,8 @@
 //////////////////////CONSTR////////////////////////////
 
 unsigned int BezierPatch::ms_currentId = 0;
+GLint BezierPatch::m_vboId = 0;
+GLint BezierPatch::m_eboId = 0;
 
 BezierPatch::BezierPatch() :
     m_id                (ms_currentId++),
@@ -158,6 +160,28 @@ void BezierPatch::showSurface()
     }
 }
 
+void BezierPatch::setPoint(size_t i, const glm::vec3& CP, bool sendToVBO)
+{
+    m_points[i]=CP;
+    if(sendToVBO && (m_drawPatch || m_drawCP))
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, m_vboId);
+        //offset starts at position i, multiplied by the size and added to the first offset
+        glBufferSubData(GL_ARRAY_BUFFER, m_firstVBO+(i*3*sizeof(GL_FLOAT)), 3*sizeof(GL_FLOAT), &m_points[i]);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        notifySurfaceChanged();
+    }
+    else
+        notifyPatchChanged();
+    if(sendToVBO)
+        updateVBOSurface();
+}
+
+const glm::vec3& BezierPatch::getPoint(size_t i) const
+{
+    return m_points[i];
+}
+
 BezierPatch& BezierPatch::operator=(const BezierPatch& other)
 {
     if(&other!=this)
@@ -189,7 +213,7 @@ BezierPatch& BezierPatch::operator=(const BezierPatch& other)
     return (*this);
 }
 
-void BezierPatch::updateVBOPatch(GLint vboId, GLint eboId)
+void BezierPatch::updateVBOPatch()
 {
     if((!m_drawPatch && !m_drawCP) || !m_patchChanged)
         return;
@@ -197,12 +221,12 @@ void BezierPatch::updateVBOPatch(GLint vboId, GLint eboId)
     if(m_surfaceEBOCalculationNeeded) //this should never happen yet
         makePatchEBO();
 
-    glBindBuffer(GL_ARRAY_BUFFER, vboId);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vboId);
     //offset starts at where we told the bezier patch to start putting datas in the VBO. Copy m_points.
     glBufferSubData(GL_ARRAY_BUFFER, m_firstVBO, getSizeVBOPosition(), &m_points[0]);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eboId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_eboId);
     //offset starts at where we told the bezier patch to start putting indexes in the VBO. Copy m_EBOPoints.
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, m_firstEBO, getSizeEBOPosition() , &m_EBOPoints[0]);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -210,7 +234,7 @@ void BezierPatch::updateVBOPatch(GLint vboId, GLint eboId)
     m_patchChanged=false;
 }
 
-void BezierPatch::updateVBOSurface(GLint vboId, GLint eboId)
+void BezierPatch::updateVBOSurface()
 {
     if(!m_drawSurface || !m_surfaceChanged)
         return;
@@ -220,12 +244,12 @@ void BezierPatch::updateVBOSurface(GLint vboId, GLint eboId)
         makeSurfaceEBO();
     makeSurfaceVBO();
 
-    glBindBuffer(GL_ARRAY_BUFFER, vboId);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vboId);
     //offset starts after the VBO datas where points have been input
     glBufferSubData(GL_ARRAY_BUFFER, m_firstVBO+getSizeVBOPosition(), getSizeVBOSurface(), &m_surface[0]);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eboId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_eboId);
     //offset starts after the EBO datas where point indexes have been input
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, m_firstEBO+getSizeEBOPosition(), getSizeEBOSurface(), &m_EBOSurface[0]);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -233,16 +257,16 @@ void BezierPatch::updateVBOSurface(GLint vboId, GLint eboId)
     m_surfaceChanged=false;
 }
 
-void BezierPatch::setResolution(size_t resolution)
+void BezierPatch::setResolution(int resolution)
 {
-    m_resolution=resolution < 100 ? (resolution > 2 ? resolution : 2) : 99;
+    m_resolution=std::max(2, std::min(100, resolution));
     notifySurfaceChanged();
     makeSurfaceVBO();
     makeSurfaceEBO();
     m_surfaceEBOCalculationNeeded=false;
 }
 
-size_t BezierPatch::resolution() const
+int BezierPatch::resolution() const
 {
     return m_resolution;
 }
@@ -267,10 +291,10 @@ void BezierPatch::draw(GLint uColorLocation)
     drawControlPoints();
 }
 
-glm::vec3 *BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float &r, float& distance) const
+void BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties)
 {
-    float oldR=r;
-    size_t iIndex;
+    float r=hitProperties.sizeHit;
+    int iIndex=-1;
     for(size_t i=0; i<m_points.size(); ++i)
     {
         float dotPD, length;
@@ -286,9 +310,16 @@ glm::vec3 *BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3
             }
         }
     }
-    if(r!=oldR)
-        distance=glm::length(m_points[iIndex]-origin);
-    return r!=oldR ? (glm::vec3 *)&m_points[iIndex] : NULL;
+    if(iIndex!=-1)
+    {
+        hitProperties.occuredHit=true;
+        hitProperties.objectHit = this;
+        hitProperties.indexCPHit = iIndex;
+        hitProperties.sizeHit = r;
+        hitProperties.distanceHit=glm::length(m_points[iIndex]-origin);
+
+    }
+    return;
 }
 
 //////////////////////PROTECTED////////////////////////////

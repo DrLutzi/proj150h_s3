@@ -3,53 +3,16 @@
 #include <QKeyEvent>
 
 Viewer::Viewer(QWidget *parent) :
-    QGLViewer(parent)
+    QGLViewer(parent),
+    m_selectedCP(false),
+    m_oldMousePos(0,0),
+    m_deltaPos(0,0),
+    m_selectionSize(0.5f),
+    m_surfacePolygonMode(GL_FILL),
+    m_refreshTimer(this),
+    m_refreshRate(60),
+    m_waitingUpdate(false)
 {}
-
-void Viewer::tp_init()
-{
-    m_oldMousePos=QPoint(0,0);
-    m_deltaPos=QPoint(0,0);
-    m_selectedCP=false;
-    m_drawSurfaces=false;
-    m_surfacePolygonMode=GL_LINE;
-    srand(time(NULL));
-
-    setMouseTracking(true);
-
-    // SHADER
-    m_ShaderProgram = new ShaderProgramBezier();
-
-    //VBO
-    glGenBuffers(1, &m_vbo_id);
-
-    //EBO
-    glGenBuffers(1, &m_ebo_id);
-
-    // genere 1 VAO
-    glGenVertexArrays(1, &m_Vao);
-
-    // on travaille sur celui-ci
-    glBindVertexArray(m_Vao);
-
-    //associe l'ebo
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo_id);
-
-    // associe le VBO de position
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo_id);
-    // avec l'attribut position du shader
-    glEnableVertexAttribArray(m_ShaderProgram->idOfVertexAttribute);
-    // en donne les bon parametre (idAttrib, 3 x float / sommets, pas de normalisation,
-    // et 0, 0 : on ne saute rien et on commence au debut)
-    glVertexAttribPointer(m_ShaderProgram->idOfVertexAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    //vao fini
-    glBindVertexArray(0);
-
-    m_manager = new BezierPatch_Manager(m_Vao, m_vbo_id, m_ebo_id, m_ShaderProgram->idOfColor);
-
-    m_manager->setRefreshRate(60);
-}
 
 Viewer::~Viewer()
 {
@@ -71,15 +34,63 @@ void Viewer::init()
 	// la couleur de fond
 	glClearColor(0.1,0.1,0.2,0.0);
 
-	// on initialize le rendu que l'on veut faire
-    tp_init();
+    // on initialise le rendu que l'on veut faire
+    render_init();
 
 	// LIB QGLViewer scene initialization
     setSceneRadius(20.0);
     setSceneCenter(qglviewer::Vec(0.0,0.0,0.0));
     camera()->showEntireScene();
+}
 
-    glPolygonMode(GL_FRONT_AND_BACK,m_surfacePolygonMode);
+void Viewer::render_init()
+{
+    srand(time(NULL));
+
+    m_refreshTimer.setInterval((int)(float(1000)/m_refreshRate));
+    connect(&m_refreshTimer, &QTimer::timeout, this, &Viewer::update);
+
+    setMouseTracking(true);
+
+    // SHADER
+    m_ShaderProgram = new ShaderProgramBezier();
+
+    //VBO
+    glGenBuffers(1, &m_vboId);
+
+    //EBO
+    glGenBuffers(1, &m_eboId);
+
+    // genere 1 VAO
+    glGenVertexArrays(1, &m_vaoId);
+
+    // on travaille sur celui-ci
+    glBindVertexArray(m_vaoId);
+
+    //associe l'ebo
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_eboId);
+
+    // associe le VBO de position
+    glBindBuffer(GL_ARRAY_BUFFER, m_vboId);
+    // avec l'attribut position du shader
+    glEnableVertexAttribArray(m_ShaderProgram->idOfVertexAttribute);
+    // en donne les bon parametre (idAttrib, 3 x float / sommets, pas de normalisation,
+    // et 0, 0 : on ne saute rien et on commence au debut)
+    glVertexAttribPointer(m_ShaderProgram->idOfVertexAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    //vao fini
+    glBindVertexArray(0);
+
+    //display filled polygons as surface
+    glPolygonMode(GL_FRONT_AND_BACK, m_surfacePolygonMode);
+
+    m_manager = new BezierPatch_Manager(m_vaoId, m_vboId, m_eboId, m_ShaderProgram->idOfColor);
+}
+
+void Viewer::setRefreshRate(unsigned int refreshRate)
+{
+    refreshRate = refreshRate>0 ? refreshRate : 1;
+    m_refreshTimer.setInterval((int)(float(1000)/m_refreshRate));
 }
 
 BezierPatch_Manager *Viewer::manager()
@@ -102,7 +113,7 @@ void Viewer::draw()
         glUniformMatrix4fv(m_ShaderProgram->idOfProjectionMatrix, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
         // travaille avec le vao defini (et donc les buffers associés)
-        glBindVertexArray(m_Vao);
+        glBindVertexArray(m_vaoId);
 
         glPointSize(4.0); // clair !!
         glLineWidth(2.0);
@@ -123,9 +134,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
-    float r=0.5;
-
-    if(!(m_selectedCP=m_manager->rayIntersectsCP(m_origin, m_direction, r, m_distanceSelection)))
+    if(!(m_selectedCP=m_manager->rayIntersectsCP(m_origin, m_direction, m_selectionSize, m_distanceSelection)))
         QGLViewer::mousePressEvent(e);
 }
 
@@ -144,19 +153,27 @@ void Viewer::mouseMoveEvent(QMouseEvent *e)
     m_origin=vecToGlmVec3(origin);
     m_direction=vecToGlmVec3(direction);
 
-    m_deltaPos=e->pos()-m_oldMousePos;
-    m_oldMousePos=e->pos();
-
-    if(m_selectedCP)
+    if(e->buttons() & Qt::LeftButton)
     {
-        m_manager->updateSelectedCP(m_origin+m_direction*m_distanceSelection);
-        m_manager->updateScene();
-        updateGL();
+        m_deltaPos=e->pos()-m_oldMousePos;
+        m_oldMousePos=e->pos();
+
+        if(m_selectedCP)
+        {
+            if(m_refreshTimer.isActive())
+                m_waitingUpdate=true;
+            else
+            {
+                updateSelectedCP();
+                m_waitingUpdate=false;
+                m_refreshTimer.start();
+            }
+        }
+        else
+            QGLViewer::mouseMoveEvent(e);
     }
     else
-    {
         QGLViewer::mouseMoveEvent(e);
-    }
 }
 
 glm::vec3 Viewer::vecToGlmVec3(const qglviewer::Vec& v)
@@ -194,4 +211,23 @@ glm::mat4 Viewer::getCurrentProjectionMatrix() const
 			pm[i][j] = (float)gl_pm[i*4+j];
 	}
 	return pm;
+}
+
+///PRIVATE SLOTS
+
+void Viewer::update()
+{
+    m_refreshTimer.stop();
+    if(m_waitingUpdate && m_selectedCP)
+    {
+        updateSelectedCP();
+    }
+}
+
+///PRIVATE
+
+void Viewer::updateSelectedCP()
+{
+    m_manager->updateSelectedCP(m_origin+m_direction*m_distanceSelection);
+    updateGL();
 }

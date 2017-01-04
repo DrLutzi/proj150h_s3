@@ -1,7 +1,6 @@
 #include "bezierpatch_manager.h"
 
-BezierPatch_Manager::BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation, QObject *parent) :
-    QObject(parent),
+BezierPatch_Manager::BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint eboId, GLint uColorLocation) :
     m_patchs(),
     m_dependencies(),
     m_VAOId(vaoId),
@@ -13,20 +12,10 @@ BezierPatch_Manager::BezierPatch_Manager(GLint vaoId, GLint vboPositionId, GLint
     m_currentBaseVertex(0),
     m_VBOCapacity(0),
     m_EBOCapacity(0),
-    m_selectedCP(NULL),
-    m_selectedPatch(NULL),
-    m_refreshTimer(),
-    m_refreshRate(60),
-    m_waitingUpdate(false)
+    m_selectionHitProperties()
 {
-    m_refreshTimer.setInterval((int)(float(1000)/m_refreshRate));
-    connect(&m_refreshTimer, SIGNAL(timeout()), this, SLOT(update()));
-}
-
-void BezierPatch_Manager::setRefreshRate(unsigned int refreshRate)
-{
-    refreshRate = refreshRate>0 ? refreshRate : 1;
-    m_refreshTimer.setInterval((int)(float(1000)/m_refreshRate));
+    BezierPatch::setVBOPosition(m_VBOPositionId);
+    BezierPatch::setEBO(m_EBOId);
 }
 
 void BezierPatch_Manager::append(BezierPatch* patch, bool reallocate)
@@ -160,22 +149,15 @@ void BezierPatch_Manager::remakeScene()
 
 void BezierPatch_Manager::updateScene()
 {
-    if(m_refreshTimer.isActive())
-        m_waitingUpdate=true;
-    else
+    //transfer informations to the VBO and the EBO.
+    for(iterator it=begin(); it!=end(); ++it)
     {
-        m_waitingUpdate=false;
-        m_refreshTimer.start();
-        //transfer informations to the VBO and the EBO.
-        for(iterator it=begin(); it!=end(); ++it)
-        {
-            BezierPatch* patch=(*it).second;
+        BezierPatch* patch=(*it).second;
 
-            if(patch!=NULL)
-            {
-                patch->updateVBOPatch(m_VBOPositionId, m_EBOId);
-                patch->updateVBOSurface(m_VBOPositionId, m_EBOId);
-            }
+        if(patch!=NULL)
+        {
+            patch->updateVBOPatch();
+            patch->updateVBOSurface();
         }
     }
 }
@@ -192,9 +174,10 @@ void BezierPatch_Manager::drawScene()
 
 //CONTROL POINT SELECTION
 
-bool BezierPatch_Manager::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float& distance)
+bool BezierPatch_Manager::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float r, float &distance)
 {
-    m_selectedCP=NULL;
+    BezierPatch::RayHit hitProperties(r);
+
     for(iterator it=begin(); it!=end(); ++it)
     {
         BezierPatch* patch=(*it).second;
@@ -203,33 +186,30 @@ bool BezierPatch_Manager::rayIntersectsCP(const glm::vec3& origin, const glm::ve
         if(patch->isDrawCP())
         {
             //try to connect with a control point (this function also modifies r)
-            glm::vec3 *other=patch->rayIntersectsCP(origin, direction, r, distance);
-            if(other!=NULL)
-            {
-                m_selectedCP=other;
-                m_selectedPatch=patch;
-            }
+            patch->rayIntersectsCP(origin, direction, hitProperties);
         }
     }
-    return m_selectedCP!=NULL;
+    if(hitProperties.occuredHit)
+    {
+        m_selectionHitProperties=hitProperties;
+        distance=hitProperties.distanceHit;
+    }
+    return hitProperties.occuredHit;
 }
 
 void BezierPatch_Manager::updateSelectedCP(const glm::vec3& newPosition)
 {
-    if(m_selectedCP!=NULL)
+    if(m_selectionHitProperties.objectHit!=NULL)
     {
-        (*m_selectedCP)=newPosition;
-        if(m_selectedPatch!=NULL)
-        {
-            m_selectedPatch->notifyPatchChanged();
-        }
+        m_selectionHitProperties.objectHit->setPoint(m_selectionHitProperties.indexCPHit, newPosition, true);
     }
+    else
+        WARNING("BezierPatch_Manager : updateSelectedCP called with no selected CP");
 }
 
 void BezierPatch_Manager::releaseSelectedCP()
 {
-    m_selectedCP=NULL;
-    m_selectedPatch=NULL;
+    m_selectionHitProperties.objectHit=NULL;
 }
 
 BezierPatch *BezierPatch_Manager::operator[](unsigned int i)
@@ -244,16 +224,16 @@ void BezierPatch_Manager::setPatch(unsigned int index, BezierPatch* patch)
 
 BezierPatch* BezierPatch_Manager::getPatch(unsigned int index)
 {
-    return m_patchs.at(index);
-}
-
-//////////////////////PRIV.SLOT////////////////////////////
-
-void BezierPatch_Manager::update()
-{
-    m_refreshTimer.stop();
-    if(m_waitingUpdate)
-        updateScene();
+    BezierPatch *foundPatch=NULL;
+    try
+    {
+        foundPatch=m_patchs.at(index);
+    }
+    catch(std::out_of_range e)
+    {
+        WARNING("BezierPatch_Manager - getPatch: patch doesn't exist anymore");
+    }
+    return foundPatch;
 }
 
 //////////////////////PRIVATE////////////////////////////

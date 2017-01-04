@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <ShaderProgramBezier.h>
 #include "bezierpatch_manager.h"
-
+#include <QTimer>
 
 /**
  * @brief The Viewer class
@@ -22,12 +22,17 @@ public:
 
     BezierPatch_Manager * manager();
 
+    inline void setSelectionSize(float selectionSize) {m_selectionSize=selectionSize;}
+
 protected:
-	/// OpenGL intialisation appelee par la QGLViewer
+    /// OpenGL intialisation called automatically
     void init();
 
-    /// transforms rectangular patch into one upper triangular patch
-    void rectangularPatch2UpperTrianglePatch();
+    /// Program-specific render
+    void render_init();
+
+    ///refresh rate for CP selection
+    void setRefreshRate(unsigned int refreshRate);
 
 	/// draw callback de la QGLViewer
     void draw();
@@ -53,23 +58,26 @@ protected:
     /// recupere la matrice de projection de la QGLViewer
 	glm::mat4 getCurrentProjectionMatrix() const;
 
-    /// init specific au TP
-    void tp_init();
+private slots:
 
-    /// Donnees du TP
-    /// id de VAO
-    GLuint m_Vao;
-    /// id de VBO pour les positions et les lignes des CP
-    GLuint m_vbo_id;
-    /// id de IBO pour desiner les triangles/lignes
-    GLuint m_ebo_id;
+    /// slot fired when timer out
+    void update();
+
+private:
+
+    void updateSelectedCP();
+
+    ///VAO Id (vbo+ebo)
+    GLuint m_vaoId;
+    ///VBO Id (positions)
+    GLuint m_vboId;
+    ///EBO Id (triangles, etc)
+    GLuint m_eboId;
     /// shader prg
     ShaderProgramBezier* m_ShaderProgram;
 
     /// patch uniforme
     BezierPatch_Manager *m_manager;
-
-private:
 
     glm::vec3 m_origin, m_direction;
     bool m_selectedCP;
@@ -77,10 +85,21 @@ private:
     QPoint m_oldMousePos, m_deltaPos;
     /// distance between camera and selected point
     float m_distanceSelection;
-    /// compute bezier surface for next frame
-    bool m_drawSurfaces;
+    ///
+    /// \brief m_selectionSize size of the control points hitboxes for selection
+    ///
+    float m_selectionSize;
 
     GLenum m_surfacePolygonMode;
+
+    ///A timer to limit the number of times a scene can be updated
+    QTimer                          m_refreshTimer;
+
+    ///refresh rate of the manager
+    unsigned int                    m_refreshRate;
+
+    ///indicates if an update function has been recently called or not
+    bool                            m_waitingUpdate;
 };
 
 #endif

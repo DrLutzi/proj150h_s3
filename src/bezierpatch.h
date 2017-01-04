@@ -88,8 +88,9 @@ public:
     inline virtual size_t getNumberOfPointsSurface() const {return m_surface.size();}
 
     //base setpoint, getpoint
-    inline void setPoint(size_t i, const glm::vec3& CP){m_points[i]=CP; notifyPatchChanged();}
-    inline const glm::vec3& getPoint(size_t i) const {return m_points[i];}
+
+    void setPoint(size_t i, const glm::vec3& CP, bool sendToVBO=false);
+    const glm::vec3& getPoint(size_t i) const;
 
     //operations
 
@@ -98,11 +99,29 @@ public:
     /**
      * @brief setResolution sets the surface's resolution. How it is handled varies between patches.
      */
-    void setResolution(size_t resolution);
-    size_t resolution() const;
+    void setResolution(int resolution);
+    int resolution() const;
     void clear();
 
     void draw(GLint uColorLocation);
+
+    //selection
+
+    class RayHit
+    {
+    public:
+        RayHit(float sizeHitbox=0):
+            occuredHit(false),
+            objectHit(NULL),
+            sizeHit(sizeHitbox)
+        {}
+
+        bool        occuredHit;
+        BezierPatch *objectHit;
+        int         indexCPHit;
+        float       sizeHit;
+        float       distanceHit;
+    };
 
     /**
      * @brief rayIntersectsCP computes intersection between a control point and a ray
@@ -114,7 +133,9 @@ public:
      * @param distance distance between origin and point found
      * @return a pointer to the control point intersected if one was found, otherwise a null pointer
      */
-    glm::vec3* rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, float &r, float &distance) const;
+    void rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties);
+
+    //VBO content pre-calculation
 
     /**
      * @brief makePatchEBO computes the lines of the patch.
@@ -134,12 +155,14 @@ public:
      */
     virtual void makeSurfaceEBO()=0;
 
-    void updateVBOPatch(GLint vboId, GLint eboId);
-    void updateVBOSurface(GLint vboId, GLint eboId);
+    void updateVBOPatch();
+    void updateVBOSurface();
 
     //static
 
     inline static unsigned int currentId(){return ms_currentId;}
+    inline static void setVBOPosition(GLint vboId) {m_vboId=vboId;}
+    inline static void setEBO(GLint eboId) {m_eboId=eboId;}
 
 protected:
 
@@ -217,6 +240,8 @@ protected:
     //static
 
     static unsigned int         ms_currentId;
+    static GLint                m_vboId;
+    static GLint                m_eboId;
 };
 
 #endif // BEZIERPATCH_H

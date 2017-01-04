@@ -55,6 +55,8 @@ private slots:
 
     void on_pushButton_remove_clicked();
 
+    void on_doubleSpinBox_selectionSize_valueChanged(double arg1);
+
 private:
     Ui::MainWindow *ui;
     Viewer *m_viewer;

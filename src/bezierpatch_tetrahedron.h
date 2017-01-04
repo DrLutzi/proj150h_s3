@@ -19,7 +19,7 @@ public:
 
     //set
 
-    void setPoint(size_t i, size_t j, size_t k, size_t l, const glm::vec3& cp);
+    void setPoint(size_t i, size_t j, size_t k, size_t l, const glm::vec3& cp, bool sendToVBO=false);
 
     void makePatchEBO();
     void makeSurfaceVBO();
@@ -37,7 +37,7 @@ public:
     /// \brief raising raises a tetrahedron from top to bottom.
     /// Very specific, used only by PatchDependencySolver
     ///
-    void raising();
+    void raising(bool invert=false);
 
 protected:
 

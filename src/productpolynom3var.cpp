@@ -176,6 +176,31 @@ Sum_ProductPolynom3Var& Sum_ProductPolynom3Var::operator=(const Sum_ProductPolyn
     return (*this);
 }
 
+void Sum_ProductPolynom3Var::simplify()
+{
+    for(iterator it=begin(); it!=end(); ++it)
+    {
+        ProductPolynom3Var &term=(*it);
+        for(iterator it2=it+1; it2!=end(); ++it2)
+        {
+            ProductPolynom3Var term2=(*it2);
+            //check if they have the same degrees of variables a, b and c
+            if(term[ProductPolynom3Var::PP3V_A]==term2[ProductPolynom3Var::PP3V_A] &&
+               term[ProductPolynom3Var::PP3V_B]==term2[ProductPolynom3Var::PP3V_B] &&
+               term[ProductPolynom3Var::PP3V_C]==term2[ProductPolynom3Var::PP3V_C])
+            {
+                //if they do increment term by the coefficient of term2
+                term += term2.coef();
+
+                //it2 will be invalidated after erase, so we need to set it back
+                --it2;
+                m_expression.erase(it2+1);
+            }
+        }
+    }
+    return;
+}
+
 Sum_ProductPolynom3Var Sum_ProductPolynom3Var::remarkable_identity_plus(ProductPolynom3Var::var_t first, ProductPolynom3Var::var_t second, unsigned int n)
 {
     Sum_ProductPolynom3Var result(n+1);

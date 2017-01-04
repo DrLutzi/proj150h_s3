@@ -37,9 +37,9 @@ size_t BezierPatch_Rectangle::sizeN() const
 
 //set
 
-void BezierPatch_Rectangle::setPoint(size_t i, size_t j, const glm::vec3 &cp)
+void BezierPatch_Rectangle::setPoint(size_t i, size_t j, const glm::vec3 &cp, bool sendToVBO)
 {
-    BezierPatch::setPoint(i*m_sizeN+j, cp);
+    BezierPatch::setPoint(i*m_sizeN+j, cp, sendToVBO);
 }
 
 

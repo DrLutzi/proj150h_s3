@@ -68,60 +68,19 @@ const glm::vec3 &BezierPatch_Hexaedron::getPoint(size_t i, size_t j, size_t k) c
 
 const glm::vec3 &BezierPatch_Hexaedron::getPoint(size_t i, size_t j, Face_t face) const
 {
-    size_t i2, j2, k2;
-    switch(face)
-    {
-    case FRONT:
-        i2=i;
-        j2=j;
-        k2=0;
-        break;
-
-    case BACK:
-        i2=i;
-        j2=sizeN()-j-1;
-        k2=sizeP()-1;
-        break;
-
-    case LEFT:
-        i2=i;
-        j2=0;
-        k2=sizeP()-j-1;
-        break;
-
-    case RIGHT:
-        i2=i;
-        j2=sizeN()-1;
-        k2=j;
-        break;
-
-    case TOP:
-        i2=0;
-        j2=j;
-        k2=i;
-        break;
-
-    case BOTTOM:
-        i2=sizeM()-1;
-        j2=j;
-        k2=sizeP()-i-1;
-        break;
-    }
-
-    return getPoint(i2, j2, k2);
+    return BezierPatch::getPoint(indexOf(i,j,face));
 }
 
 //set
 
-void BezierPatch_Hexaedron::setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp)
+void BezierPatch_Hexaedron::setPoint(size_t i, size_t j, size_t k, const glm::vec3& cp, bool sendToVBO)
 {
-    BezierPatch::setPoint(indexOf(i,j,k),cp);
+    BezierPatch::setPoint(indexOf(i,j,k),cp, sendToVBO);
 }
 
-void BezierPatch_Hexaedron::setPoint(size_t i, size_t j, Face_t face, const glm::vec3& cp)
+void BezierPatch_Hexaedron::setPoint(size_t i, size_t j, Face_t face, const glm::vec3& cp, bool sendToVBO)
 {
-    glm::vec3& point=const_cast<glm::vec3&>(getPoint(i,j,face));
-    point = cp;
+    BezierPatch::setPoint(indexOf(i,j,face),cp, sendToVBO);
 }
 
 void BezierPatch_Hexaedron::makePatchEBO()
@@ -303,9 +262,9 @@ BezierPatch_Hexaedron* BezierPatch_Hexaedron::generate(size_t m, size_t n, size_
     size_t i,j,k;
     for(k=0;k<p;++k)
     {
-        for(j=0;j<n;++j)
+        for(i=0;i<m;++i)
         {
-            for(i=0;i<m;++i)
+            for(j=0;j<n;++j)
             {
                 noise=genNoise();
                 currentCP.x+=noise;
@@ -314,12 +273,12 @@ BezierPatch_Hexaedron* BezierPatch_Hexaedron::generate(size_t m, size_t n, size_
                 currentCP.x+=xStep+noise;
             }
             noise=genNoise();
-            currentCP.y+=yStep+noise;
+            currentCP.y-=yStep+noise;
             noise=genNoise();
             currentCP.x=noise;
         }
         noise=genNoise();
-        currentCP.z+=zStep+noise;
+        currentCP.z-=zStep+noise;
         noise=genNoise();
         currentCP.y=noise;
     }
@@ -435,4 +394,48 @@ glm::vec3 &BezierPatch_Hexaedron::getTmpCasteljau(size_t i, size_t j, size_t k)
 size_t BezierPatch_Hexaedron::indexOf(size_t i, size_t j, size_t k) const
 {
     return sizeN()*(sizeM()*k + i) + j;
+}
+
+size_t BezierPatch_Hexaedron::indexOf(size_t i, size_t j, Face_t face) const
+{
+    size_t i2, j2, k2;
+    switch(face)
+    {
+    case FRONT:
+        i2=i;
+        j2=j;
+        k2=0;
+        break;
+
+    case BACK:
+        i2=i;
+        j2=sizeN()-j-1;
+        k2=sizeP()-1;
+        break;
+
+    case LEFT:
+        i2=i;
+        j2=0;
+        k2=sizeP()-j-1;
+        break;
+
+    case RIGHT:
+        i2=i;
+        j2=sizeN()-1;
+        k2=j;
+        break;
+
+    case TOP:
+        i2=0;
+        j2=j;
+        k2=i;
+        break;
+
+    case BOTTOM:
+        i2=sizeM()-1;
+        j2=j;
+        k2=sizeP()-i-1;
+        break;
+    }
+    return indexOf(i2, j2, k2);
 }

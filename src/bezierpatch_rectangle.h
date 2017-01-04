@@ -19,7 +19,7 @@ public:
 
     //set
 
-    void setPoint(size_t i, size_t j, const glm::vec3& cp);
+    void setPoint(size_t i, size_t j, const glm::vec3& cp, bool sendToVBO=false);
 
     void makePatchEBO();
     void makeSurfaceVBO();

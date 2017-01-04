@@ -50,6 +50,10 @@ void MainWindow::notifyNewPatchFromDialogNewPatch(BezierPatch *bp)
         m_viewer->manager()->append(bp, false);
         bp->showCP();
         bp->showPatch();
+        //hard coded default color
+        bp->setControlPointColor(glm::vec4(0.8, 0.2, 0.2, 1.0));
+        bp->setPatchColor(glm::vec4(0.5, 0.5, 0.5, 1.0));
+        bp->setSurfaceColor(glm::vec4(0.1, 0.7, 0.1, 1.0));
         bp->setResolution(10);
         m_viewer->manager()->remakeScene();
         m_viewer->updateGL();
@@ -78,6 +82,7 @@ void MainWindow::notifyClickedFromRectanglePatchWidget()
             addBezierPatch2List(m_viewer->manager()->getPatch(id++));
             addBezierPatch2List(m_viewer->manager()->getPatch(id));
         }
+        m_viewer->updateGL();
     }
 }
 
@@ -101,6 +106,7 @@ void MainWindow::notifyClickedFromHexaedronPatchWidget(BezierPatch_Hexaedron::Fa
             addBezierPatch2List(m_viewer->manager()->getPatch(id++));
             addBezierPatch2List(m_viewer->manager()->getPatch(id));
         }
+        m_viewer->updateGL();
     }
 }
 
@@ -111,7 +117,10 @@ void MainWindow::notifyClickedUpdateDependencyFromSpecificPatchWidget()
         WARNING("Update dependency: Patch not being selected anymore");
     }
     else
+    {
         m_viewer->manager()->updateDependency(m_selectedPatch->id());
+        m_viewer->updateGL();
+    }
 }
 
 void MainWindow::notifyClickedRemoveDependencyFromSpecificPatchWidget()
@@ -161,8 +170,12 @@ void MainWindow::on_listWidget_Patchs_itemSelectionChanged()
 
             auto deleteSpecificWidget=[this]()
             {
-                ui->specificPatchWidget_layout->removeWidget(m_specificPatchWidget);
-                delete m_specificPatchWidget;
+                if(m_specificPatchWidget!=NULL)
+                {
+                    ui->specificPatchWidget_layout->removeWidget(m_specificPatchWidget);
+                    delete m_specificPatchWidget;
+                    m_specificPatchWidget = NULL;
+                }
             };
 
             auto showSpecificWidget=[this]()
@@ -171,18 +184,18 @@ void MainWindow::on_listWidget_Patchs_itemSelectionChanged()
                 m_specificPatchWidget->show();
             };
 
+            deleteSpecificWidget();
             if(dynamic_cast<BezierPatch_Rectangle*>(m_selectedPatch))
             {
-                deleteSpecificWidget();
                 m_specificPatchWidget=new Widget_RectanglePatchWidget(this);
                 showSpecificWidget();
             }
             else if(dynamic_cast<BezierPatch_Hexaedron*>(m_selectedPatch))
             {
-                deleteSpecificWidget();
                 m_specificPatchWidget=new Widget_HexaedronPatchWidget(this);
                 showSpecificWidget();
             }
+
         }
         else
             WARNING("on_listWidget_Patchs_itemSelectionChanged : patch should have been found inside manager");
@@ -291,4 +304,9 @@ void MainWindow::on_pushButton_remove_clicked()
             WARNING("on_pushButton_remove_clicked : current Item of listWidget expected to not be NULL");
         m_viewer->updateGL();
     }
+}
+
+void MainWindow::on_doubleSpinBox_selectionSize_valueChanged(double arg1)
+{
+    m_viewer->setSelectionSize(arg1);
 }

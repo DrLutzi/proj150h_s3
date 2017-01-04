@@ -76,7 +76,8 @@ bool PatchDependencySolver::createR2TDependency(unsigned int id)
                 polynomialSum*=ProductPolynom3Var(1, n1-j1, n2-j2, 0);
                 //(b+c)^(j1)*a^(n1-j1)*(a+c)^(j2)*b^(n2-j2)
                 polynomialSum*=Sum_ProductPolynom3Var::remarkable_identity_plus(ProductPolynom3Var::PP3V_A, ProductPolynom3Var::PP3V_C, j2);
-                //you could also simplify the polynomial expression (and yes, this is a TODO)
+                //optionnal: simplify the expression
+                polynomialSum.simplify();
 
                 //Finally, iterate over the sum to know what triangle point we are setting
                 //and deduce a new term of this point with the full coefficient and the rectangle control point
@@ -91,6 +92,7 @@ bool PatchDependencySolver::createR2TDependency(unsigned int id)
 
                     //now we just need to multiply by the right coefficient and divide by the left coefficient given by the equation, and there we have our polynomial.
                     ((*it)*=rightCoef)/=leftCoef;
+
                     //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
                     upperT->setPoint(i1, i2, i3, upperT->getPoint(i1, i2, i3) + rectanglePatch->getPoint(j1, j2)        *       (float)(*it).coef());
 
@@ -138,7 +140,7 @@ bool PatchDependencySolver::createH2TDependency(unsigned int id, BezierPatch_Hex
     }
     else
     {
-        m_dependencyType = H2T;
+        m_dependencyType = H2TT;
 
         m_sizeM = sizePatch.first;
         m_sizeN = sizePatch.second;
@@ -173,7 +175,8 @@ bool PatchDependencySolver::createH2TDependency(unsigned int id, BezierPatch_Hex
                 polynomialSum*=ProductPolynom3Var(1, n1-j1, n2-j2, 0);
                 //(b+c)^(j1)*a^(n1-j1)*(a+c)^(j2)*b^(n2-j2)
                 polynomialSum*=Sum_ProductPolynom3Var::remarkable_identity_plus(ProductPolynom3Var::PP3V_A, ProductPolynom3Var::PP3V_C, j2);
-                //you could also simplify the polynomial expression (and yes, this is a TODO)
+                //optionnal: simplify the expression
+                polynomialSum.simplify();
 
                 //Finally, iterate over the sum to know what triangle point we are setting
                 //and deduce a new term of this point with the full coefficient and the rectangle control point
@@ -196,8 +199,17 @@ bool PatchDependencySolver::createH2TDependency(unsigned int id, BezierPatch_Hex
                 }
             }
         }
-        upperT->raising();
-        lowerT->raising();
+        //invert the way we raise the tetrahedrons if TOP or BOTTOM (just from experimentation)
+        if(face==BezierPatch_Hexaedron::TOP || face==BezierPatch_Hexaedron::BOTTOM)
+        {
+            upperT->raising(true);
+            lowerT->raising(true);
+        }
+        else
+        {
+            upperT->raising(false);
+            lowerT->raising(false);
+        }
 
         //now that the calculation of the CPs is out of the way, set our patches' display properties
         copyParent(hexaedronPatch, upperT, lowerT);
@@ -280,26 +292,42 @@ void PatchDependencySolver::updateDependency()
                     if(m_dependencyType==R2T)
                     {
                         //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
-                        child1.tChild->setPoint(i1, i2, i3, child1.tChild->getPoint(i1, i2, i3) + parent.rParent->getPoint(j1, j2)        *       (float)(*it).coef());
+                        if(child1.tChild!=NULL)
+                            child1.tChild->setPoint(i1, i2, i3, child1.tChild->getPoint(i1, i2, i3) + parent.rParent->getPoint(j1, j2)        *       (float)(*it).coef());
 
                         //update the point from t2, but with the opposite point for the lower triangle
-                        child2.tChild->setPoint(i1, i2, i3, child2.tChild->getPoint(i1, i2, i3) + parent.rParent->getPoint(n1-j1, n2-j2)  *       (float)(*it).coef());
+                        if(child2.tChild!=NULL)
+                            child2.tChild->setPoint(i1, i2, i3, child2.tChild->getPoint(i1, i2, i3) + parent.rParent->getPoint(n1-j1, n2-j2)  *       (float)(*it).coef());
                     }
                     else //H2T
                     {
                         //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
-                        child1.ttChild->setPoint(i1, i2, 0, i3, child1.ttChild->getPoint(i1, i2, 0, i3) + parent.hParent->getPoint(j1, j2, m_parentPatchInfos)       * (float)(*it).coef());
+                        if(child1.ttChild!=NULL)
+                            child1.ttChild->setPoint(i1, i2, 0, i3, child1.ttChild->getPoint(i1, i2, 0, i3) + parent.hParent->getPoint(j1, j2, m_parentPatchInfos)       * (float)(*it).coef());
 
                         //update the point from t2, but with the opposite point for the lower triangle
-                        child2.ttChild->setPoint(i1, i2, 0, i3, child2.ttChild->getPoint(i1, i2, 0, i3) + parent.hParent->getPoint(n1-j1, n2-j2, m_parentPatchInfos) * (float)(*it).coef());
+                        if(child2.ttChild!=NULL)
+                            child2.ttChild->setPoint(i1, i2, 0, i3, child2.ttChild->getPoint(i1, i2, 0, i3) + parent.hParent->getPoint(n1-j1, n2-j2, m_parentPatchInfos) * (float)(*it).coef());
                     }
                 }
             }
         }
-        if(m_dependencyType==H2T)
+        if(m_dependencyType==H2TT)
         {
-            child1.ttChild->raising();
-            child2.ttChild->raising();
+            if(m_parentPatchInfos==BezierPatch_Hexaedron::TOP || m_parentPatchInfos==BezierPatch_Hexaedron::BOTTOM)
+            {
+                if(child1.ttChild!=NULL)
+                    child1.ttChild->raising(true);
+                if(child2.ttChild!=NULL)
+                    child2.ttChild->raising(true);
+            }
+            else
+            {
+                if(child1.ttChild!=NULL)
+                    child1.ttChild->raising(false);
+                if(child2.ttChild!=NULL)
+                    child2.ttChild->raising(false);
+            }
         }
     }
     m_manager.updateScene();
