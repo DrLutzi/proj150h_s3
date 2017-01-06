@@ -310,3 +310,16 @@ void MainWindow::on_doubleSpinBox_selectionSize_valueChanged(double arg1)
 {
     m_viewer->setSelectionSize(arg1);
 }
+
+void MainWindow::on_checkBox_fill_toggled(bool checked)
+{
+    m_viewer->setSurfacePolygonMode(checked);
+}
+
+void MainWindow::on_checkBox_lock_clicked(bool checked)
+{
+    if(m_selectedPatch!=NULL)
+    {
+        m_selectedPatch->setLock(checked);
+    }
+}

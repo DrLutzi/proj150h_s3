@@ -1,5 +1,4 @@
 #include "patchdependencysolver.h"
-#include "errorsHandler.hpp"
 #include "bezierpatch_manager.h"
 
 PatchDependencySolver::PatchDependencySolver(BezierPatch_Manager &mgr):
@@ -54,6 +53,9 @@ bool PatchDependencySolver::createR2TDependency(unsigned int id)
         BezierPatch_Triangle *upperT=new BezierPatch_Triangle(n1+n2+1);
         BezierPatch_Triangle *lowerT=new BezierPatch_Triangle(n1+n2+1);
 
+        //will be useful for later
+        double n1n2Fact=boost::math::factorial<double>(n1+n2);
+
         //allocating the vector of polynomial sums to update the dependency later
         m_dependencyMatrix.resize(m_sizeM * m_sizeN);
 
@@ -88,17 +90,15 @@ bool PatchDependencySolver::createR2TDependency(unsigned int id)
                     size_t i3=(*it)[ProductPolynom3Var::PP3V_C];
 
                     //can be optimized in time because done several times, but this function isn't called too often anyway
-                    double leftCoef=boost::math::factorial<double>(n1+n2)/(boost::math::factorial<double>(i1)*boost::math::factorial<double>(i2)*boost::math::factorial<double>(i3));
+                    double leftCoef=n1n2Fact/(boost::math::factorial<double>(i1)*boost::math::factorial<double>(i2)*boost::math::factorial<double>(i3));
 
                     //now we just need to multiply by the right coefficient and divide by the left coefficient given by the equation, and there we have our polynomial.
                     ((*it)*=rightCoef)/=leftCoef;
-
-                    //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
-                    upperT->setPoint(i1, i2, i3, upperT->getPoint(i1, i2, i3) + rectanglePatch->getPoint(j1, j2)        *       (float)(*it).coef());
-
-                    //update the point from t2, but with the opposite point for the lower triangle
-                    lowerT->setPoint(i1, i2, i3, lowerT->getPoint(i1, i2, i3) + rectanglePatch->getPoint(n1-j1, n2-j2)  *       (float)(*it).coef());
                 }
+
+                //finally, set the points according to their dependency
+                upperT->setFromR2TDependency(rectanglePatch->getPoint(j1, j2), polynomialSum);
+                lowerT->setFromR2TDependency(rectanglePatch->getPoint(n1-j1, n2-j2), polynomialSum);
             }
         }
 
@@ -156,6 +156,9 @@ bool PatchDependencySolver::createH2TDependency(unsigned int id, BezierPatch_Hex
         //allocating the vector of polynomial sums to update the dependency later
         m_dependencyMatrix.resize(m_sizeM * m_sizeN);
 
+        //will be useful for later
+        double n1n2Fact=boost::math::factorial<double>(n1+n2);
+
         for(size_t j1=0; j1<m_sizeM; ++j1)
         {
             for(size_t j2=0; j2<m_sizeN; ++j2)
@@ -178,8 +181,7 @@ bool PatchDependencySolver::createH2TDependency(unsigned int id, BezierPatch_Hex
                 //optionnal: simplify the expression
                 polynomialSum.simplify();
 
-                //Finally, iterate over the sum to know what triangle point we are setting
-                //and deduce a new term of this point with the full coefficient and the rectangle control point
+                //Finally, compute the coefficients
                 for(Sum_ProductPolynom3Var::iterator it=polynomialSum.begin(); it!=polynomialSum.end(); ++it)
                 {
                     size_t i1=(*it)[ProductPolynom3Var::PP3V_A];
@@ -187,16 +189,15 @@ bool PatchDependencySolver::createH2TDependency(unsigned int id, BezierPatch_Hex
                     size_t i3=(*it)[ProductPolynom3Var::PP3V_C];
 
                     //can be optimized in time because done several times, but this function isn't called too often anyway
-                    double leftCoef=boost::math::factorial<double>(n1+n2)/(boost::math::factorial<double>(i1)*boost::math::factorial<double>(i2)*boost::math::factorial<double>(i3));
+                    double leftCoef=n1n2Fact/(boost::math::factorial<double>(i1)*boost::math::factorial<double>(i2)*boost::math::factorial<double>(i3));
 
                     //now we just need to multiply by the right coefficient and divide by the left coefficient given by the equation, and there we have our polynomial.
                     ((*it)*=rightCoef)/=leftCoef;
-                    //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
-                    upperT->setPoint(i1, i2, 0, i3, upperT->getPoint(i1, i2, 0, i3) + hexaedronPatch->getPoint(j1, j2, face)        * (float)(*it).coef());
-
-                    //update the point from t2, but with the opposite point for the lower triangle
-                    lowerT->setPoint(i1, i2, 0, i3, lowerT->getPoint(i1, i2, 0, i3) + hexaedronPatch->getPoint(n1-j1, n2-j2, face)  * (float)(*it).coef());
                 }
+
+                //finally, set the points according to their dependency
+                upperT->setFromH2TTDependency(hexaedronPatch->getPoint(j1, j2, face), polynomialSum);
+                lowerT->setFromH2TTDependency(hexaedronPatch->getPoint(n1-j1, n2-j2, face), polynomialSum);
             }
         }
         //invert the way we raise the tetrahedrons if TOP or BOTTOM (just from experimentation)
@@ -229,10 +230,11 @@ bool PatchDependencySolver::createH2TDependency(unsigned int id, BezierPatch_Hex
     return true;
 }
 
+
 /**
  * @brief updateDependency updates the child patches with the current dependency set
  */
-void PatchDependencySolver::updateDependency()
+void PatchDependencySolver::updateDependencies()
 {
     if(m_dependencyType!=NO_DEPENDENCY)
     {
@@ -259,8 +261,8 @@ void PatchDependencySolver::updateDependency()
                 WARNING("updateDependency: rectangle parent couldn't be found");
                 return;
             }
-            child1.tChild = dynamic_cast<BezierPatch_Triangle*>(m_manager.getPatch(m_child1Id));
-            child2.tChild = dynamic_cast<BezierPatch_Triangle*>(m_manager.getPatch(m_child2Id));
+            child1.tChild = dynamic_cast<BezierPatch_Triangle*>(p_c1);
+            child2.tChild = dynamic_cast<BezierPatch_Triangle*>(p_c2);
         }
         else //H2T
         {
@@ -269,8 +271,8 @@ void PatchDependencySolver::updateDependency()
                 WARNING("updateDependency: hexaedron parent couldn't be found");
                 return;
             }
-            child1.ttChild = dynamic_cast<BezierPatch_Tetrahedron*>(m_manager.getPatch(m_child1Id));
-            child2.ttChild = dynamic_cast<BezierPatch_Tetrahedron*>(m_manager.getPatch(m_child2Id));
+            child1.ttChild = dynamic_cast<BezierPatch_Tetrahedron*>(p_c1);
+            child2.ttChild = dynamic_cast<BezierPatch_Tetrahedron*>(p_c2);
         }
 
         size_t n1=m_sizeM-1;
@@ -282,34 +284,27 @@ void PatchDependencySolver::updateDependency()
                 //get a reference to the proper polynomial sum, with a simple matrix-like access
                 Sum_ProductPolynom3Var &polynomialSum = m_dependencyMatrix[indexOf(j1,j2)];
 
-                //Set every point according to its polynom
-                for(Sum_ProductPolynom3Var::iterator it=polynomialSum.begin(); it!=polynomialSum.end(); ++it)
+                if(m_dependencyType==R2T)
                 {
-                    size_t i1=(*it)[ProductPolynom3Var::PP3V_A];
-                    size_t i2=(*it)[ProductPolynom3Var::PP3V_B];
-                    size_t i3=(*it)[ProductPolynom3Var::PP3V_C];
-
-                    if(m_dependencyType==R2T)
-                    {
                         //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
-                        if(child1.tChild!=NULL)
-                            child1.tChild->setPoint(i1, i2, i3, child1.tChild->getPoint(i1, i2, i3) + parent.rParent->getPoint(j1, j2)        *       (float)(*it).coef());
+                    if(child1.tChild!=NULL)
+                        child1.tChild->setFromR2TDependency(parent.rParent->getPoint(j1, j2), polynomialSum);
 
                         //update the point from t2, but with the opposite point for the lower triangle
-                        if(child2.tChild!=NULL)
-                            child2.tChild->setPoint(i1, i2, i3, child2.tChild->getPoint(i1, i2, i3) + parent.rParent->getPoint(n1-j1, n2-j2)  *       (float)(*it).coef());
-                    }
-                    else //H2T
-                    {
-                        //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
-                        if(child1.ttChild!=NULL)
-                            child1.ttChild->setPoint(i1, i2, 0, i3, child1.ttChild->getPoint(i1, i2, 0, i3) + parent.hParent->getPoint(j1, j2, m_parentPatchInfos)       * (float)(*it).coef());
-
-                        //update the point from t2, but with the opposite point for the lower triangle
-                        if(child2.ttChild!=NULL)
-                            child2.ttChild->setPoint(i1, i2, 0, i3, child2.ttChild->getPoint(i1, i2, 0, i3) + parent.hParent->getPoint(n1-j1, n2-j2, m_parentPatchInfos) * (float)(*it).coef());
-                    }
+                    if(child2.tChild!=NULL)
+                        child2.tChild->setFromR2TDependency(parent.rParent->getPoint(n1-j1, n2-j2), polynomialSum);
                 }
+                else //H2T
+                {
+                    //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
+                    if(child1.ttChild!=NULL)
+                        child1.ttChild->setFromH2TTDependency(parent.hParent->getPoint(j1, j2, m_parentPatchInfos), polynomialSum);
+
+                    //update the point from t2, but with the opposite point for the lower triangle
+                    if(child2.ttChild!=NULL)
+                        child2.ttChild->setFromH2TTDependency(parent.hParent->getPoint(n1-j1, n2-j2, m_parentPatchInfos), polynomialSum);
+                }
+
             }
         }
         if(m_dependencyType==H2TT)
@@ -334,13 +329,58 @@ void PatchDependencySolver::updateDependency()
     return;
 }
 
+void PatchDependencySolver::updateDependency(size_t j1, size_t j2, glm::vec3& deltaCP)
+{
+    if(m_dependencyType!=NO_DEPENDENCY)
+    {
+        //reset the childs' patch
+        BezierPatch *p_c1 = m_manager.getPatch(m_child1Id), *p_c2=m_manager.getPatch(m_child2Id);
+        if(p_c1==NULL && p_c2==NULL)
+        {
+            WARNING("updateDependency: both child weren't found, no dependency updated");
+            return;
+        }
+
+        typedef union {BezierPatch_Triangle *tChild; BezierPatch_Tetrahedron *ttChild;} Child_u;
+        Child_u child1, child2;
+
+        Sum_ProductPolynom3Var &polynomialSum = m_dependencyMatrix[indexOf(j1,j2)];
+        Sum_ProductPolynom3Var &polynomialSum_reversed = m_dependencyMatrix[indexOf(m_sizeM-j1-1,m_sizeN-j2-1)];
+
+        if(m_dependencyType == R2T)
+        {
+            child1.tChild = dynamic_cast<BezierPatch_Triangle*>(p_c1);
+            if(child1.tChild!=NULL)
+                child1.tChild->setFromR2TDependency(deltaCP, polynomialSum);
+            child2.tChild = dynamic_cast<BezierPatch_Triangle*>(p_c2);
+            if(child2.tChild!=NULL)
+                child2.tChild->setFromR2TDependency(deltaCP, polynomialSum_reversed);
+        }
+        else //H2T
+        {
+            child1.ttChild = dynamic_cast<BezierPatch_Tetrahedron*>(p_c1);
+            if(child1.ttChild!=NULL)
+                child1.ttChild->setFromH2TTDependency(deltaCP, polynomialSum);
+
+            child2.ttChild = dynamic_cast<BezierPatch_Tetrahedron*>(p_c2);
+            if(child2.ttChild!=NULL)
+                child2.ttChild->setFromH2TTDependency(deltaCP, polynomialSum_reversed);
+        }
+    }
+    m_manager.updateScene();
+    return;
+}
+
 /**
  * @brief copies some of the content of parent into ch1 and ch2.
  */
 void PatchDependencySolver::copyParent(BezierPatch *parent, BezierPatch *ch1, BezierPatch *ch2)
 {
-    ch1->setControlPointColor(parent->controlPointColor());
-    ch2->setControlPointColor(parent->controlPointColor());
+    ch1->lock();
+    ch2->lock();
+
+    ch1->setControlPointColor(glm::vec4(0,1.0f,0,0));
+    ch2->setControlPointColor(glm::vec4(0,0,1.0f,0));
 
     ch1->setPatchColor(parent->patchColor());
     ch2->setPatchColor(parent->patchColor());

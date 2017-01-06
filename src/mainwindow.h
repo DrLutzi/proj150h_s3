@@ -57,6 +57,10 @@ private slots:
 
     void on_doubleSpinBox_selectionSize_valueChanged(double arg1);
 
+    void on_checkBox_fill_toggled(bool checked);
+
+    void on_checkBox_lock_clicked(bool checked);
+
 private:
     Ui::MainWindow *ui;
     Viewer *m_viewer;

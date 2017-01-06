@@ -317,6 +317,19 @@ void BezierPatch_Tetrahedron::raising(bool invert)
             }
 }
 
+void BezierPatch_Tetrahedron::setFromH2TTDependency(const glm::vec3& hexaedronCP, const Sum_ProductPolynom3Var& dependency)
+{
+    for(Sum_ProductPolynom3Var::const_iterator it=dependency.begin(); it!=dependency.end(); ++it)
+    {
+        size_t i1=(*it)[ProductPolynom3Var::PP3V_A];
+        size_t i2=(*it)[ProductPolynom3Var::PP3V_B];
+        size_t i3=(*it)[ProductPolynom3Var::PP3V_C];
+
+        //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
+        setPoint(i1, i2, 0, i3, getPoint(i1, i2, 0, i3) + hexaedronCP * (float)(*it).coef());
+    }
+}
+
 void BezierPatch_Tetrahedron::drawPatch() const
 {
     if(!m_drawPatch)

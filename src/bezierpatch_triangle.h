@@ -2,6 +2,7 @@
 #define BEZIERPATCH_TRIANGLE_H
 
 #include "bezierpatch.h"
+#include "productpolynom3var.h"
 
 class BezierPatch_Triangle : public BezierPatch
 {
@@ -32,6 +33,10 @@ public:
     //static random generation
 
     static BezierPatch_Triangle* generate(size_t n, float xStep=1.0f, float yStep=1.0f, float max_noise=0.5f);
+
+    //constraint solving
+
+    void setFromR2TDependency(const glm::vec3& rectangleCP, const Sum_ProductPolynom3Var& dependency);
 
 protected:
 

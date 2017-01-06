@@ -22,7 +22,7 @@ BezierPatch_Rectangle::~BezierPatch_Rectangle()
 
 const glm::vec3 &BezierPatch_Rectangle::getPoint(size_t i, size_t j) const
 {
-    return BezierPatch::getPoint(i*m_sizeN+j);
+    return BezierPatch::getPoint(indexOf(i,j));
 }
 
 size_t BezierPatch_Rectangle::sizeM() const
@@ -39,7 +39,7 @@ size_t BezierPatch_Rectangle::sizeN() const
 
 void BezierPatch_Rectangle::setPoint(size_t i, size_t j, const glm::vec3 &cp, bool sendToVBO)
 {
-    BezierPatch::setPoint(i*m_sizeN+j, cp, sendToVBO);
+    BezierPatch::setPoint(indexOf(i,j), cp, sendToVBO);
 }
 
 
@@ -53,7 +53,7 @@ void BezierPatch_Rectangle::makePatchEBO()
         {
             for(size_t j=0; j<m_sizeN; ++j)
             {
-                m_EBOPoints[eboIndex++]=i*m_sizeN+j;
+                m_EBOPoints[eboIndex++]=indexOf(i,j);
             }
         }
 
@@ -61,7 +61,7 @@ void BezierPatch_Rectangle::makePatchEBO()
         {
             for(size_t i=0; i<m_sizeM; ++i)
             {
-                m_EBOPoints[eboIndex++]=i*m_sizeN+j;
+                m_EBOPoints[eboIndex++]=indexOf(i,j);
             }
         }
     }
@@ -145,6 +145,47 @@ BezierPatch_Rectangle* BezierPatch_Rectangle::generate(size_t m, size_t n, float
     return bp;
 }
 
+void BezierPatch_Rectangle::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties)
+{
+    if(m_locked)
+        return;
+
+    //pretty much the same, but we need to register i and j
+    float r=hitProperties.sizeHit;
+    int iIndex=-1, jIndex=-1;
+    for(size_t i=0; i<sizeM(); ++i)
+    {
+        for(size_t j=0;j<sizeN(); ++j)
+        {
+            float dotPD, length;
+            glm::vec3 toPoint=getPoint(i,j)-origin;
+
+            if((dotPD=glm::dot(toPoint, direction)) > 0) //point devant la caméra
+            {
+                glm::vec3 projectionPoint=glm::dot(toPoint, direction)*direction + origin; //projection sur le rayon
+                if((length=glm::length(projectionPoint-getPoint(i,j)))<r) //si le point projeté du rayon est dans la sphère il y a intersection
+                {
+                    r=length;
+                    iIndex=i;
+                    jIndex=j;
+                }
+            }
+        }
+    }
+    if(iIndex!=-1)
+    {
+        hitProperties.occuredHit=true;
+        hitProperties.objectHit = this;
+        hitProperties.indexCPHit = indexOf(iIndex,jIndex);
+        hitProperties.firstCoordinate = iIndex;
+        hitProperties.secondCoordinate = jIndex;
+        hitProperties.sizeHit = r;
+        hitProperties.distanceHit=glm::length(m_points[indexOf(iIndex,jIndex)]-origin);
+
+    }
+    return;
+}
+
 //////////////////////PROTECTED////////////////////////////
 
 //others
@@ -213,5 +254,10 @@ const glm::vec3& BezierPatch_Rectangle::casteljau(float u, float v)
 
 glm::vec3 &BezierPatch_Rectangle::getTmpCasteljau(size_t i, size_t j)
 {
-    return m_tmpCasteljau[i*m_sizeN+j];
+    return m_tmpCasteljau[indexOf(i,j)];
+}
+
+size_t BezierPatch_Rectangle::indexOf(size_t i, size_t j) const
+{
+    return i*m_sizeN+j;
 }

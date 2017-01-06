@@ -7,6 +7,8 @@
 #include "bezierpatch_hexaedron.h"
 #include "bezierpatch_tetrahedron.h"
 
+#include "errorsHandler.hpp"
+
 /**
  * @brief represents a single dependency between a patch and two other patchs, between the following combinations:
  * Rectangle -> 2 Triangles
@@ -20,6 +22,10 @@ class PatchDependencySolver
 public:
     PatchDependencySolver(BezierPatch_Manager &mgr);
     ~PatchDependencySolver();
+
+    ///R2T = rectangle and 2 triangles
+    ///H2TT = hexaedron and 2 tetrahedrons
+    typedef enum {NO_DEPENDENCY, R2T, H2TT} dependency_t;
 
     /**
      * @brief createR2TDependency creates a rectangle -> 2 triangles dependency relation
@@ -39,7 +45,11 @@ public:
     /**
      * @brief updateDependency updates the child patches with the current dependency set
      */
-    void updateDependency();
+    void updateDependencies();
+    void updateDependency(size_t i, size_t j2, glm::vec3 &deltaCP);
+
+    inline dependency_t type() const {return m_dependencyType;}
+    inline BezierPatch_Hexaedron::Face_t infos() const {return m_parentPatchInfos;}
 
 private:
 
@@ -58,10 +68,6 @@ private:
      */
     size_t m_sizeM;
     size_t m_sizeN;
-
-    ///R2T = rectangle and 2 triangles
-    ///H2TT = hexaedron and 2 tetrahedrons
-    typedef enum {NO_DEPENDENCY, R2T, H2TT} dependency_t;
 
     /**
      * @brief m_dependencyType what type of dependency the instance holds

@@ -88,7 +88,8 @@ HEADERS  += viewer.h \
     patchdependencysolver.h \
     widget_specificpatchwidget.h \
     widget_rectanglepatchwidget.h \
-    widget_hexaedronpatchwidget.h
+    widget_hexaedronpatchwidget.h \
+    patchdependencysolver.hpp
 
 OTHER_FILES += \
     simpleShader.vert \

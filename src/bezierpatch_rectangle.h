@@ -33,6 +33,8 @@ public:
 
     static BezierPatch_Rectangle* generate(size_t m, size_t n, float xStep=1.0f, float yStep=1.0f, float max_noise=0.5f);
 
+    void rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties);
+
 protected:
 
     //others
@@ -45,6 +47,8 @@ protected:
     glm::vec3 &getTmpCasteljau(size_t i, size_t j);
 
 private:
+
+    size_t indexOf(size_t i, size_t j) const;
 
     size_t m_sizeM;
     size_t m_sizeN;

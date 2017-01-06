@@ -24,6 +24,8 @@ public:
 
     inline void setSelectionSize(float selectionSize) {m_selectionSize=selectionSize;}
 
+    void setSurfacePolygonMode(bool fill);
+
 protected:
     /// OpenGL intialisation called automatically
     void init();

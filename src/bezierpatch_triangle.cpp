@@ -170,6 +170,19 @@ BezierPatch_Triangle* BezierPatch_Triangle::generate(size_t n, float xStep, floa
     return bp;
 }
 
+void BezierPatch_Triangle::setFromR2TDependency(const glm::vec3& rectangleCP, const Sum_ProductPolynom3Var& dependency)
+{
+    for(Sum_ProductPolynom3Var::const_iterator it=dependency.begin(); it!=dependency.end(); ++it)
+    {
+        size_t i1=(*it)[ProductPolynom3Var::PP3V_A];
+        size_t i2=(*it)[ProductPolynom3Var::PP3V_B];
+        size_t i3=(*it)[ProductPolynom3Var::PP3V_C];
+
+        //update the point from t1, where its index is given by the polynom's degrees, with the upper triangle point
+        setPoint(i1, i2, i3, getPoint(i1, i2, i3) + rectangleCP * (float)(*it).coef());
+    }
+}
+
 //////////////////////PROTECTED////////////////////////////
 
 //draw functions

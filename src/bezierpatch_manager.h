@@ -130,6 +130,8 @@ private:
 
     ///Selected CP for
     BezierPatch::RayHit             m_selectionHitProperties;
+
+    std::map<unsigned int, PatchDependencySolver>::iterator m_selectedCPDependency;
 };
 
 #endif // BEZIERPATCH_MANAGER_H

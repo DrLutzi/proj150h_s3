@@ -93,6 +93,15 @@ void Viewer::setRefreshRate(unsigned int refreshRate)
     m_refreshTimer.setInterval((int)(float(1000)/m_refreshRate));
 }
 
+
+void Viewer::setSurfacePolygonMode(bool fill)
+{
+    m_surfacePolygonMode = fill ? GL_FILL : GL_LINE;
+    glPolygonMode(GL_FRONT_AND_BACK, m_surfacePolygonMode);
+    updateGL();
+}
+
+
 BezierPatch_Manager *Viewer::manager()
 {
     return m_manager;

@@ -7,6 +7,7 @@
 #include <deque>
 #include <string>
 #include <QString>
+#include "errorsHandler.hpp"
 
 class BezierPatch
 {
@@ -119,6 +120,9 @@ public:
         bool        occuredHit;
         BezierPatch *objectHit;
         int         indexCPHit;
+        int         firstCoordinate;
+        int         secondCoordinate;
+        int         thirdCoordinate;
         float       sizeHit;
         float       distanceHit;
     };
@@ -133,7 +137,7 @@ public:
      * @param distance distance between origin and point found
      * @return a pointer to the control point intersected if one was found, otherwise a null pointer
      */
-    void rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties);
+    virtual void rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties);
 
     //VBO content pre-calculation
 
@@ -163,6 +167,15 @@ public:
     inline static unsigned int currentId(){return ms_currentId;}
     inline static void setVBOPosition(GLint vboId) {m_vboId=vboId;}
     inline static void setEBO(GLint eboId) {m_eboId=eboId;}
+
+    ///
+    /// \brief lock use these functions to lock a patch, so that none of its control points can be moved accidentally.
+    ///
+    inline void lock() {m_locked=true;}
+    inline void unlock() {m_locked=false;}
+    inline void setLock(bool block) {m_locked=block;}
+    inline bool isLocked() {return m_locked;}
+    //TODO
 
 protected:
 
@@ -236,6 +249,8 @@ protected:
 
     bool                        m_patchEBOCalculationNeeded;
     bool                        m_surfaceEBOCalculationNeeded;
+
+    bool                        m_locked;
 
     //static
 

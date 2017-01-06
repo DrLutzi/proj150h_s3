@@ -285,6 +285,100 @@ BezierPatch_Hexaedron* BezierPatch_Hexaedron::generate(size_t m, size_t n, size_
     return bp;
 }
 
+void BezierPatch_Hexaedron::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties)
+{
+    if(m_locked)
+        return;
+
+    //pretty much the same, but we need to register i, j and k
+    float r=hitProperties.sizeHit;
+    int iIndex=-1, jIndex=-1, kIndex=-1;
+
+    for(size_t i=0; i<sizeM(); ++i)
+    {
+        for(size_t j=0; j<sizeN(); ++j)
+        {
+            for(size_t k=0;k<sizeP(); ++k)
+            {
+                float dotPD, length;
+                glm::vec3 toPoint=getPoint(i,j,k)-origin;
+
+                if((dotPD=glm::dot(toPoint, direction)) > 0) //point devant la caméra
+                {
+                    glm::vec3 projectionPoint=glm::dot(toPoint, direction)*direction + origin; //projection sur le rayon
+                    if((length=glm::length(projectionPoint-getPoint(i,j,k)))<r) //si le point projeté du rayon est dans la sphère il y a intersection
+                    {
+                        r=length;
+                        iIndex=i;
+                        jIndex=j;
+                        kIndex=k;
+                    }
+                }
+            }
+        }
+    };
+
+    if(iIndex!=-1)
+    {
+        hitProperties.occuredHit=true;
+        hitProperties.objectHit = this;
+        hitProperties.indexCPHit = indexOf(iIndex,jIndex,kIndex);
+        hitProperties.firstCoordinate = iIndex;
+        hitProperties.secondCoordinate = jIndex;
+        hitProperties.thirdCoordinate = kIndex;
+        hitProperties.sizeHit = r;
+        hitProperties.distanceHit=glm::length(m_points[indexOf(iIndex,jIndex,kIndex)]-origin);
+
+    }
+    return;
+}
+
+bool BezierPatch_Hexaedron::projectOnFace(size_t i, size_t j, size_t k, std::pair<size_t, size_t> &coords, Face_t face) const
+{
+    bool isOutter=false;
+
+    switch(face)
+    {
+    case FRONT:
+        coords.first=i;
+        coords.second=j;
+        isOutter=(k==0);
+        break;
+
+    case BACK:
+        coords.first=i;
+        coords.second=sizeN()-j-1;
+        isOutter=(k==sizeP()-1);
+        break;
+
+    case LEFT:
+        coords.first=i;
+        isOutter=(j==0);
+        coords.second=sizeP()-k-1;
+        break;
+
+    case RIGHT:
+        coords.first=i;
+        isOutter=(j==sizeN()-1);
+        coords.second=k;
+        break;
+
+    case TOP:
+        isOutter=(i==0);
+        coords.second=j;
+        coords.first=k;
+        break;
+
+    case BOTTOM:
+        isOutter=(i==sizeM()-1);
+        coords.second=j;
+        coords.first=sizeP()-k-1;
+        break;
+    }
+    return isOutter;
+}
+
+
 //others
 
 void BezierPatch_Hexaedron::drawPatch() const

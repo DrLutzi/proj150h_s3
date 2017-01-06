@@ -45,6 +45,7 @@ void BezierPatch_Manager::append(BezierPatch* patch, bool reallocate)
             patch->setFirstEBO(firstEBO);
             patch->setBaseVertexEBO(baseVertex);
         }
+        m_selectedCPDependency = m_dependencies.end();
     }
 }
 
@@ -62,7 +63,7 @@ BezierPatch *BezierPatch_Manager::remove(unsigned int id)
         {
             m_dependencies.erase(dependencyPosition);
         }
-
+        m_selectedCPDependency = m_dependencies.end();
         return removedPtr;
     }
     else
@@ -92,7 +93,7 @@ void BezierPatch_Manager::updateDependency(unsigned int id)
 {
     try
     {
-        m_dependencies.at(id).updateDependency();
+        m_dependencies.at(id).updateDependencies();
     }
     catch(std::out_of_range e)
     {
@@ -193,6 +194,7 @@ bool BezierPatch_Manager::rayIntersectsCP(const glm::vec3& origin, const glm::ve
     {
         m_selectionHitProperties=hitProperties;
         distance=hitProperties.distanceHit;
+        m_selectedCPDependency = m_dependencies.find(hitProperties.objectHit->id());
     }
     return hitProperties.occuredHit;
 }
@@ -201,7 +203,32 @@ void BezierPatch_Manager::updateSelectedCP(const glm::vec3& newPosition)
 {
     if(m_selectionHitProperties.objectHit!=NULL)
     {
+        glm::vec3 oldCP=m_selectionHitProperties.objectHit->getPoint(m_selectionHitProperties.indexCPHit);
         m_selectionHitProperties.objectHit->setPoint(m_selectionHitProperties.indexCPHit, newPosition, true);
+        if(m_selectedCPDependency != m_dependencies.end())
+        {//there is a current dependency with the selected object
+            bool needUpdate = true;
+            glm::vec3 deltaCP=newPosition-oldCP;
+            std::pair<size_t, size_t> coordinates;
+            BezierPatch_Hexaedron *hexaedron=dynamic_cast<BezierPatch_Hexaedron*>(m_selectionHitProperties.objectHit);
+            //fill coordinates
+            if(hexaedron!=NULL)
+            {
+                //we need to project on the face of the dependency the current coordinates to get those of the dependency matrix
+                needUpdate=hexaedron->projectOnFace(m_selectionHitProperties.firstCoordinate, m_selectionHitProperties.secondCoordinate, m_selectionHitProperties.thirdCoordinate,
+                                            coordinates, (*m_selectedCPDependency).second.infos());
+            }
+            else
+            {   //rectangle
+                //projection = identity
+                coordinates.first=m_selectionHitProperties.firstCoordinate;
+                coordinates.second=m_selectionHitProperties.secondCoordinate;
+
+            }
+            //update the dependency by the difference between the old and new CP
+            if(needUpdate)
+                (*m_selectedCPDependency).second.updateDependency(coordinates.first, coordinates.second, deltaCP);
+        }
     }
     else
         WARNING("BezierPatch_Manager : updateSelectedCP called with no selected CP");

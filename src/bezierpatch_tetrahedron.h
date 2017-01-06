@@ -2,6 +2,7 @@
 #define BEZIERPATCH_THETRAEDRON_H
 
 #include "bezierpatch.h"
+#include "productpolynom3var.h"
 
 class BezierPatch_Tetrahedron : public BezierPatch
 {
@@ -38,6 +39,10 @@ public:
     /// Very specific, used only by PatchDependencySolver
     ///
     void raising(bool invert=false);
+
+    //dependency
+
+    void setFromH2TTDependency(const glm::vec3& hexaedronCP, const Sum_ProductPolynom3Var& dependency);
 
 protected:
 

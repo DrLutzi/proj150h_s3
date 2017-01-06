@@ -21,7 +21,8 @@ BezierPatch::BezierPatch() :
     m_patchChanged      (true),
     m_surfaceChanged    (true),
     m_patchEBOCalculationNeeded    (true),
-    m_surfaceEBOCalculationNeeded  (true)
+    m_surfaceEBOCalculationNeeded  (true),
+    m_locked(false)
 {
 }
 
@@ -42,7 +43,8 @@ BezierPatch::BezierPatch(size_t sizePatch, const QString& name) :
     m_patchChanged      (true),
     m_surfaceChanged    (true),
     m_patchEBOCalculationNeeded    (true),
-    m_surfaceEBOCalculationNeeded  (true)
+    m_surfaceEBOCalculationNeeded  (true),
+    m_locked(false)
 {}
 
 BezierPatch::~BezierPatch()
@@ -293,6 +295,9 @@ void BezierPatch::draw(GLint uColorLocation)
 
 void BezierPatch::rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties)
 {
+    if(m_locked)
+        return;
+
     float r=hitProperties.sizeHit;
     int iIndex=-1;
     for(size_t i=0; i<m_points.size(); ++i)

@@ -43,6 +43,16 @@ public:
     static BezierPatch_Hexaedron* generate(size_t m, size_t n, size_t p,
                                            float xStep=1.0f, float yStep=1.0f, float zStep=-1.0f, float max_noise=0.5f);
 
+    void rayIntersectsCP(const glm::vec3& origin, const glm::vec3& direction, RayHit& hitProperties);
+
+    /// \brief projectOnFace projects the i,j,k coordinates onto a face.
+    /// \param i i
+    /// \param j j
+    /// \param k k
+    /// \param coords out coordinates (j1,j2)
+    /// \param face face to project the coordinates i,j,k on
+    /// \return wether the coordinates were projected correctly on the outter plan (true) or inside the hexaedron (false)
+    bool projectOnFace(size_t i, size_t j, size_t k, std::pair<size_t, size_t>& coords, Face_t face) const;
 
 protected:
 
